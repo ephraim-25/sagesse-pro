@@ -1,0 +1,10 @@
+project_id = "dpbrlxoucbktuhiwnicn"
+
+[functions.record-presence]
+verify_jwt = false
+
+[functions.record-telework]
+verify_jwt = false
+
+[functions.dashboard-data]
+verify_jwt = false
