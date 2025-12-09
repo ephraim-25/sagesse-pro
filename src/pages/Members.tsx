@@ -10,7 +10,9 @@ import {
   Mail,
   Phone,
   Building2,
-  Award
+  Award,
+  QrCode,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -19,64 +21,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const members = [
-  { 
-    id: 1, 
-    name: "Marie Dupont", 
-    email: "marie.dupont@csn.gov", 
-    phone: "+33 1 23 45 67 89",
-    department: "Recherche", 
-    role: "Directrice de Recherche",
-    level: "Expert",
-    status: "present",
-    avatar: "MD"
-  },
-  { 
-    id: 2, 
-    name: "Jean Martin", 
-    email: "jean.martin@csn.gov", 
-    phone: "+33 1 23 45 67 90",
-    department: "IT", 
-    role: "Ingénieur Senior",
-    level: "Expert",
-    status: "remote",
-    avatar: "JM"
-  },
-  { 
-    id: 3, 
-    name: "Sophie Bernard", 
-    email: "sophie.bernard@csn.gov", 
-    phone: "+33 1 23 45 67 91",
-    department: "Communication", 
-    role: "Chargée de Communication",
-    level: "Intermédiaire",
-    status: "present",
-    avatar: "SB"
-  },
-  { 
-    id: 4, 
-    name: "Pierre Durand", 
-    email: "pierre.durand@csn.gov", 
-    phone: "+33 1 23 45 67 92",
-    department: "Finance", 
-    role: "Comptable",
-    level: "Intermédiaire",
-    status: "absent",
-    avatar: "PD"
-  },
-  { 
-    id: 5, 
-    name: "Claire Moreau", 
-    email: "claire.moreau@csn.gov", 
-    phone: "+33 1 23 45 67 93",
-    department: "Administration", 
-    role: "Assistante Administrative",
-    level: "Junior",
-    status: "present",
-    avatar: "CM"
-  },
-];
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useProfiles, usePresences, useTodayTeletravail, type Profile } from "@/hooks/useData";
+import { MemberQRCode } from "@/components/qrcode/MemberQRCode";
 
 const levelColors = {
   Expert: "bg-accent/10 text-accent",
@@ -92,12 +44,36 @@ const statusConfig = {
 
 const Members = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMember, setSelectedMember] = useState<Profile | null>(null);
+  const [showQRDialog, setShowQRDialog] = useState(false);
 
-  const filteredMembers = members.filter(member => 
-    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    member.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { data: profiles, isLoading: loadingProfiles } = useProfiles();
+  const { data: presences } = usePresences(new Date().toISOString().split('T')[0]);
+
+  // Get member status based on today's presence
+  const getMemberStatus = (memberId: string): 'present' | 'absent' | 'remote' => {
+    const presence = presences?.find(p => p.user_id === memberId);
+    if (presence?.heure_entree && !presence?.heure_sortie) {
+      return presence.type === 'teletravail' ? 'remote' : 'present';
+    }
+    return 'absent';
+  };
+
+  const filteredMembers = profiles?.filter(member => 
+    member.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.prenom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.service?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.fonction?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  const getInitials = (profile: Profile) => {
+    return `${profile.prenom.charAt(0)}${profile.nom.charAt(0)}`.toUpperCase();
+  };
+
+  const handleShowQR = (member: Profile) => {
+    setSelectedMember(member);
+    setShowQRDialog(true);
+  };
 
   return (
     <AppLayout>
@@ -132,72 +108,118 @@ const Members = () => {
         </div>
 
         {/* Members Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredMembers.map((member) => (
-            <div 
-              key={member.id}
-              className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {member.avatar}
+        {loadingProfiles ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredMembers.map((member) => {
+              const status = getMemberStatus(member.id);
+              return (
+                <div 
+                  key={member.id}
+                  className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-all duration-300"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      {member.photo_url ? (
+                        <img 
+                          src={member.photo_url} 
+                          alt={`${member.prenom} ${member.nom}`}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {getInitials(member)}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-semibold text-foreground">
+                          {member.prenom} {member.nom}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{member.fonction || 'Non défini'}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Voir le profil</DropdownMenuItem>
+                        <DropdownMenuItem>Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShowQR(member)}>
+                          <QrCode className="w-4 h-4 mr-2" />
+                          Afficher QR Code
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>Assigner une tâche</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Supprimer</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{member.name}</h3>
-                    <p className="text-sm text-muted-foreground">{member.role}</p>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="w-4 h-4" />
+                      <span className="truncate">{member.email}</span>
+                    </div>
+                    {member.telephone && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="w-4 h-4" />
+                        <span>{member.telephone}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Building2 className="w-4 h-4" />
+                      <span>{member.service || 'Non assigné'}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4 h-4 text-muted-foreground" />
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded-full font-medium",
+                        member.statut === 'actif' ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                      )}>
+                        {member.statut === 'actif' ? 'Actif' : 'Suspendu'}
+                      </span>
+                    </div>
+                    <span className={cn(
+                      "status-badge",
+                      statusConfig[status].class
+                    )}>
+                      {statusConfig[status].label}
+                    </span>
                   </div>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Voir le profil</DropdownMenuItem>
-                    <DropdownMenuItem>Modifier</DropdownMenuItem>
-                    <DropdownMenuItem>Assigner une tâche</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Supprimer</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              );
+            })}
 
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="w-4 h-4" />
-                  <span className="truncate">{member.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="w-4 h-4" />
-                  <span>{member.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Building2 className="w-4 h-4" />
-                  <span>{member.department}</span>
-                </div>
+            {filteredMembers.length === 0 && !loadingProfiles && (
+              <div className="col-span-full text-center py-12 text-muted-foreground">
+                <p>Aucun membre trouvé</p>
               </div>
+            )}
+          </div>
+        )}
 
-              <div className="flex items-center justify-between pt-4 border-t border-border">
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-muted-foreground" />
-                  <span className={cn(
-                    "text-xs px-2 py-0.5 rounded-full font-medium",
-                    levelColors[member.level as keyof typeof levelColors]
-                  )}>
-                    {member.level}
-                  </span>
-                </div>
-                <span className={cn(
-                  "status-badge",
-                  statusConfig[member.status as keyof typeof statusConfig].class
-                )}>
-                  {statusConfig[member.status as keyof typeof statusConfig].label}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* QR Code Dialog */}
+        <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>QR Code du Membre</DialogTitle>
+            </DialogHeader>
+            {selectedMember && (
+              <MemberQRCode 
+                memberId={selectedMember.id}
+                memberName={`${selectedMember.prenom} ${selectedMember.nom}`}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
