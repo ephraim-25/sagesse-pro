@@ -3,6 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import PresidentDashboard from "./pages/PresidentDashboard";
 import Members from "./pages/Members";
@@ -22,25 +25,28 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/president" element={<PresidentDashboard />} />
-          <Route path="/membres" element={<Members />} />
-          <Route path="/competences" element={<Competences />} />
-          <Route path="/taches" element={<Tasks />} />
-          <Route path="/checkin" element={<CheckIn />} />
-          <Route path="/teletravail" element={<RemoteWork />} />
-          <Route path="/historique" element={<History />} />
-          <Route path="/performance" element={<Performance />} />
-          <Route path="/rapports" element={<Reports />} />
-          <Route path="/securite" element={<Security />} />
-          <Route path="/parametres" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/president" element={<ProtectedRoute requiredRole="president"><PresidentDashboard /></ProtectedRoute>} />
+            <Route path="/membres" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+            <Route path="/competences" element={<ProtectedRoute><Competences /></ProtectedRoute>} />
+            <Route path="/taches" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
+            <Route path="/checkin" element={<ProtectedRoute><CheckIn /></ProtectedRoute>} />
+            <Route path="/teletravail" element={<ProtectedRoute><RemoteWork /></ProtectedRoute>} />
+            <Route path="/historique" element={<ProtectedRoute><History /></ProtectedRoute>} />
+            <Route path="/performance" element={<ProtectedRoute><Performance /></ProtectedRoute>} />
+            <Route path="/rapports" element={<ProtectedRoute requiredRole="chef_service"><Reports /></ProtectedRoute>} />
+            <Route path="/securite" element={<ProtectedRoute requiredRole="admin"><Security /></ProtectedRoute>} />
+            <Route path="/parametres" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
