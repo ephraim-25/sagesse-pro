@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      approvals: {
+        Row: {
+          acted_at: string | null
+          approver_id: string | null
+          comment: string | null
+          created_at: string | null
+          id: string
+          ref_id: string | null
+          ref_table: string | null
+          status: Database["public"]["Enums"]["approval_status"] | null
+          target_user_id: string
+          type: Database["public"]["Enums"]["approval_type"]
+        }
+        Insert: {
+          acted_at?: string | null
+          approver_id?: string | null
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          ref_id?: string | null
+          ref_table?: string | null
+          status?: Database["public"]["Enums"]["approval_status"] | null
+          target_user_id: string
+          type: Database["public"]["Enums"]["approval_type"]
+        }
+        Update: {
+          acted_at?: string | null
+          approver_id?: string | null
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          ref_id?: string | null
+          ref_table?: string | null
+          status?: Database["public"]["Enums"]["approval_status"] | null
+          target_user_id?: string
+          type?: Database["public"]["Enums"]["approval_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -92,6 +146,152 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "competences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exports: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          file_hash: string | null
+          file_path: string | null
+          id: string
+          params: Json | null
+          ready_at: string | null
+          requested_by: string
+          status: Database["public"]["Enums"]["export_status"] | null
+          type: Database["public"]["Enums"]["export_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          file_hash?: string | null
+          file_path?: string | null
+          id?: string
+          params?: Json | null
+          ready_at?: string | null
+          requested_by: string
+          status?: Database["public"]["Enums"]["export_status"] | null
+          type: Database["public"]["Enums"]["export_type"]
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          file_hash?: string | null
+          file_path?: string | null
+          id?: string
+          params?: Json | null
+          ready_at?: string | null
+          requested_by?: string
+          status?: Database["public"]["Enums"]["export_status"] | null
+          type?: Database["public"]["Enums"]["export_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exports_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grades: {
+        Row: {
+          can_approve_accounts: boolean | null
+          can_export_reports: boolean | null
+          can_force_checkout: boolean | null
+          can_manage_team: boolean | null
+          can_view_all_data: boolean | null
+          code: Database["public"]["Enums"]["grade_hierarchique"]
+          created_at: string | null
+          description: string | null
+          id: string
+          label: string
+          rank_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          can_approve_accounts?: boolean | null
+          can_export_reports?: boolean | null
+          can_force_checkout?: boolean | null
+          can_manage_team?: boolean | null
+          can_view_all_data?: boolean | null
+          code: Database["public"]["Enums"]["grade_hierarchique"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          label: string
+          rank_order: number
+          updated_at?: string | null
+        }
+        Update: {
+          can_approve_accounts?: boolean | null
+          can_export_reports?: boolean | null
+          can_force_checkout?: boolean | null
+          can_manage_team?: boolean | null
+          can_view_all_data?: boolean | null
+          code?: Database["public"]["Enums"]["grade_hierarchique"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          label?: string
+          rank_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          id: string
+          meta: Json | null
+          read: boolean | null
+          read_at: string | null
+          sender_id: string | null
+          title: string
+          type: string | null
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          meta?: Json | null
+          read?: boolean | null
+          read_at?: string | null
+          sender_id?: string | null
+          title: string
+          type?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          id?: string
+          meta?: Json | null
+          read?: boolean | null
+          read_at?: string | null
+          sender_id?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -195,51 +395,94 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"] | null
           auth_id: string
           created_at: string | null
+          custom_grade: string | null
           email: string
           fonction: string | null
+          grade_id: string | null
           id: string
+          last_activity_at: string | null
+          last_status: Database["public"]["Enums"]["telework_status"] | null
+          manager_id: string | null
           nom: string
           photo_url: string | null
           postnom: string | null
           prenom: string
           service: string | null
           statut: Database["public"]["Enums"]["statut_utilisateur"] | null
+          team_id: string | null
           telephone: string | null
           updated_at: string | null
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"] | null
           auth_id: string
           created_at?: string | null
+          custom_grade?: string | null
           email: string
           fonction?: string | null
+          grade_id?: string | null
           id?: string
+          last_activity_at?: string | null
+          last_status?: Database["public"]["Enums"]["telework_status"] | null
+          manager_id?: string | null
           nom: string
           photo_url?: string | null
           postnom?: string | null
           prenom: string
           service?: string | null
           statut?: Database["public"]["Enums"]["statut_utilisateur"] | null
+          team_id?: string | null
           telephone?: string | null
           updated_at?: string | null
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"] | null
           auth_id?: string
           created_at?: string | null
+          custom_grade?: string | null
           email?: string
           fonction?: string | null
+          grade_id?: string | null
           id?: string
+          last_activity_at?: string | null
+          last_status?: Database["public"]["Enums"]["telework_status"] | null
+          manager_id?: string | null
           nom?: string
           photo_url?: string | null
           postnom?: string | null
           prenom?: string
           service?: string | null
           statut?: Database["public"]["Enums"]["statut_utilisateur"] | null
+          team_id?: string | null
           telephone?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_grade_id_fkey"
+            columns: ["grade_id"]
+            isOneToOne: false
+            referencedRelation: "grades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roles_organisationnels: {
         Row: {
@@ -345,6 +588,44 @@ export type Database = {
           },
         ]
       }
+      teams: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          division: string | null
+          id: string
+          name: string
+          parent_team_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          division?: string | null
+          id?: string
+          name: string
+          parent_team_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          division?: string | null
+          id?: string
+          name?: string
+          parent_team_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_parent_team_id_fkey"
+            columns: ["parent_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teletravail_logs: {
         Row: {
           activite_declaree: string | null
@@ -395,6 +676,135 @@ export type Database = {
           },
         ]
       }
+      telework_sessions: {
+        Row: {
+          active_seconds: number | null
+          activities: Json | null
+          check_in: string
+          check_out: string | null
+          country: string | null
+          created_at: string | null
+          current_status: Database["public"]["Enums"]["telework_status"] | null
+          device: string | null
+          forced_by: string | null
+          forced_checkout: boolean | null
+          id: string
+          ip_address: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          active_seconds?: number | null
+          activities?: Json | null
+          check_in?: string
+          check_out?: string | null
+          country?: string | null
+          created_at?: string | null
+          current_status?: Database["public"]["Enums"]["telework_status"] | null
+          device?: string | null
+          forced_by?: string | null
+          forced_checkout?: boolean | null
+          id?: string
+          ip_address?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          active_seconds?: number | null
+          activities?: Json | null
+          check_in?: string
+          check_out?: string | null
+          country?: string | null
+          created_at?: string | null
+          current_status?: Database["public"]["Enums"]["telework_status"] | null
+          device?: string | null
+          forced_by?: string | null
+          forced_checkout?: boolean | null
+          id?: string
+          ip_address?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telework_sessions_forced_by_fkey"
+            columns: ["forced_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telework_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timesheets: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          break_minutes: number | null
+          created_at: string | null
+          date: string
+          details: Json | null
+          id: string
+          presence_hours: number | null
+          status: Database["public"]["Enums"]["approval_status"] | null
+          telework_hours: number | null
+          updated_at: string | null
+          user_id: string
+          worked_hours: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          break_minutes?: number | null
+          created_at?: string | null
+          date: string
+          details?: Json | null
+          id?: string
+          presence_hours?: number | null
+          status?: Database["public"]["Enums"]["approval_status"] | null
+          telework_hours?: number | null
+          updated_at?: string | null
+          user_id: string
+          worked_hours?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          break_minutes?: number | null
+          created_at?: string | null
+          date?: string
+          details?: Json | null
+          id?: string
+          presence_hours?: number | null
+          status?: Database["public"]["Enums"]["approval_status"] | null
+          telework_hours?: number | null
+          updated_at?: string | null
+          user_id?: string
+          worked_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timesheets_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -429,13 +839,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_user: {
+        Args: { _auth_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       get_profile_id: { Args: { _auth_id: string }; Returns: string }
+      get_user_grade_rank: { Args: { _user_id: string }; Returns: number }
       get_user_service: { Args: { _auth_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_manager_of: {
+        Args: { _manager_auth_id: string; _target_user_id: string }
         Returns: boolean
       }
       is_same_service: {
@@ -453,12 +872,34 @@ export type Database = {
       }
     }
     Enums: {
+      account_status: "pending_approval" | "active" | "suspended" | "rejected"
       app_role: "admin" | "president" | "chef_service" | "agent"
+      approval_status: "pending" | "approved" | "rejected"
+      approval_type:
+        | "account_creation"
+        | "timesheet"
+        | "telework_session"
+        | "grade_change"
+        | "leave_request"
+      export_status: "pending" | "processing" | "completed" | "failed"
+      export_type: "presence" | "performance" | "telework" | "timesheet"
+      grade_hierarchique:
+        | "president_conseil"
+        | "secretaire_permanent"
+        | "chef_division"
+        | "chef_bureau"
+        | "ata_1"
+        | "ata_2"
+        | "aga_1"
+        | "aga_2"
+        | "huissier"
+        | "custom"
       niveau_competence: "1" | "2" | "3" | "4" | "5"
       priorite_tache: "faible" | "moyen" | "eleve" | "urgente"
       statut_tache: "a_faire" | "en_cours" | "en_pause" | "termine"
       statut_teletravail: "connecte" | "pause" | "hors_ligne"
       statut_utilisateur: "actif" | "suspendu"
+      telework_status: "connecte" | "pause" | "reunion" | "hors_ligne"
       type_presence: "presentiel" | "teletravail"
     }
     CompositeTypes: {
@@ -587,12 +1028,36 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["pending_approval", "active", "suspended", "rejected"],
       app_role: ["admin", "president", "chef_service", "agent"],
+      approval_status: ["pending", "approved", "rejected"],
+      approval_type: [
+        "account_creation",
+        "timesheet",
+        "telework_session",
+        "grade_change",
+        "leave_request",
+      ],
+      export_status: ["pending", "processing", "completed", "failed"],
+      export_type: ["presence", "performance", "telework", "timesheet"],
+      grade_hierarchique: [
+        "president_conseil",
+        "secretaire_permanent",
+        "chef_division",
+        "chef_bureau",
+        "ata_1",
+        "ata_2",
+        "aga_1",
+        "aga_2",
+        "huissier",
+        "custom",
+      ],
       niveau_competence: ["1", "2", "3", "4", "5"],
       priorite_tache: ["faible", "moyen", "eleve", "urgente"],
       statut_tache: ["a_faire", "en_cours", "en_pause", "termine"],
       statut_teletravail: ["connecte", "pause", "hors_ligne"],
       statut_utilisateur: ["actif", "suspendu"],
+      telework_status: ["connecte", "pause", "reunion", "hors_ligne"],
       type_presence: ["presentiel", "teletravail"],
     },
   },
