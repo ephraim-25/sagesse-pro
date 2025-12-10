@@ -13,6 +13,49 @@ interface PresenceRequest {
   justification_retard?: string;
 }
 
+// Input validation function
+function validatePresenceInput(data: unknown): { valid: true; data: PresenceRequest } | { valid: false; error: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Corps de requête invalide' };
+  }
+
+  const input = data as Record<string, unknown>;
+
+  // Validate type (required)
+  if (!input.type || !['entree', 'sortie'].includes(input.type as string)) {
+    return { valid: false, error: 'Le type doit être "entree" ou "sortie"' };
+  }
+
+  // Validate optional string fields with length limits
+  if (input.appareil !== undefined) {
+    if (typeof input.appareil !== 'string' || input.appareil.length > 100) {
+      return { valid: false, error: 'Appareil doit être une chaîne de 100 caractères max' };
+    }
+  }
+
+  if (input.localisation !== undefined) {
+    if (typeof input.localisation !== 'string' || input.localisation.length > 100) {
+      return { valid: false, error: 'Localisation doit être une chaîne de 100 caractères max' };
+    }
+  }
+
+  if (input.justification_retard !== undefined) {
+    if (typeof input.justification_retard !== 'string' || input.justification_retard.length > 500) {
+      return { valid: false, error: 'Justification doit être une chaîne de 500 caractères max' };
+    }
+  }
+
+  return {
+    valid: true,
+    data: {
+      type: input.type as 'entree' | 'sortie',
+      appareil: input.appareil as string | undefined,
+      localisation: input.localisation as string | undefined,
+      justification_retard: input.justification_retard as string | undefined,
+    }
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -25,17 +68,45 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Non autorisé');
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Autorisation requise' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      throw new Error('Utilisateur non authentifié');
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Token invalide' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const { type, appareil, localisation, justification_retard }: PresenceRequest = await req.json();
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'JSON invalide' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validatePresenceInput(rawBody);
+    if (!validation.valid) {
+      console.error('Validation error:', validation.error);
+      return new Response(
+        JSON.stringify({ success: false, error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { type, appareil, localisation, justification_retard } = validation.data;
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 

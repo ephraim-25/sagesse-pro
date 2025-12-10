@@ -12,6 +12,43 @@ interface TeleworkRequest {
   localisation?: string;
 }
 
+// Input validation function
+function validateTeleworkInput(data: unknown): { valid: true; data: TeleworkRequest } | { valid: false; error: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Corps de requête invalide' };
+  }
+
+  const input = data as Record<string, unknown>;
+
+  // Validate action (required)
+  const validActions = ['check_in', 'check_out', 'pause', 'resume'];
+  if (!input.action || !validActions.includes(input.action as string)) {
+    return { valid: false, error: 'Action doit être: check_in, check_out, pause ou resume' };
+  }
+
+  // Validate optional string fields with length limits
+  if (input.activite !== undefined) {
+    if (typeof input.activite !== 'string' || input.activite.length > 500) {
+      return { valid: false, error: 'Activité doit être une chaîne de 500 caractères max' };
+    }
+  }
+
+  if (input.localisation !== undefined) {
+    if (typeof input.localisation !== 'string' || input.localisation.length > 100) {
+      return { valid: false, error: 'Localisation doit être une chaîne de 100 caractères max' };
+    }
+  }
+
+  return {
+    valid: true,
+    data: {
+      action: input.action as 'check_in' | 'check_out' | 'pause' | 'resume',
+      activite: input.activite as string | undefined,
+      localisation: input.localisation as string | undefined,
+    }
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -24,17 +61,45 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Non autorisé');
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Autorisation requise' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      throw new Error('Utilisateur non authentifié');
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Token invalide' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const { action, activite, localisation }: TeleworkRequest = await req.json();
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'JSON invalide' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateTeleworkInput(rawBody);
+    if (!validation.valid) {
+      console.error('Validation error:', validation.error);
+      return new Response(
+        JSON.stringify({ success: false, error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { action, activite, localisation } = validation.data;
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
