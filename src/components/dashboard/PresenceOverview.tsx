@@ -1,13 +1,41 @@
-import { Users, UserCheck, UserX, Laptop } from "lucide-react";
-
-const presenceData = [
-  { status: "Présent", count: 42, color: "bg-success", icon: UserCheck },
-  { status: "Absent", count: 8, color: "bg-destructive", icon: UserX },
-  { status: "Télétravail", count: 15, color: "bg-info", icon: Laptop },
-];
+import { Users, UserCheck, UserX, Laptop, Loader2 } from "lucide-react";
+import { useDashboardData } from "@/hooks/useData";
 
 export function PresenceOverview() {
-  const total = presenceData.reduce((acc, item) => acc + item.count, 0);
+  const { data: dashboardData, isLoading } = useDashboardData();
+
+  const presenceData = [
+    { 
+      status: "Présent", 
+      count: dashboardData?.overview.presents || 0, 
+      color: "bg-success", 
+      icon: UserCheck 
+    },
+    { 
+      status: "Absent", 
+      count: dashboardData?.overview.absents || 0, 
+      color: "bg-destructive", 
+      icon: UserX 
+    },
+    { 
+      status: "Télétravail", 
+      count: dashboardData?.overview.teletravail || 0, 
+      color: "bg-info", 
+      icon: Laptop 
+    },
+  ];
+
+  const total = dashboardData?.overview.totalMembers || 0;
+
+  if (isLoading) {
+    return (
+      <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
@@ -23,7 +51,7 @@ export function PresenceOverview() {
 
       <div className="space-y-4">
         {presenceData.map((item) => {
-          const percentage = Math.round((item.count / total) * 100);
+          const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
           return (
             <div key={item.status} className="space-y-2">
               <div className="flex items-center justify-between text-sm">
