@@ -36,3 +36,15 @@ verify_jwt = true
 
 [functions.dashboard-data]
 verify_jwt = true
+
+[functions.telework-checkin]
+verify_jwt = true
+
+[functions.telework-heartbeat]
+verify_jwt = true
+
+[functions.telework-checkout]
+verify_jwt = true
+
+[functions.telework-force-checkout]
+verify_jwt = true
