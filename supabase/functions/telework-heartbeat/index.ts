@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { checkRateLimit, rateLimitedResponse, rateLimitHeaders, HEARTBEAT_RATE_LIMIT } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,6 +41,13 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limiting for heartbeat - higher limit since it's called frequently
+    const rateLimitResult = checkRateLimit(`heartbeat:${user.id}`, HEARTBEAT_RATE_LIMIT);
+    if (!rateLimitResult.allowed) {
+      console.log(`Rate limit exceeded for heartbeat: user ${user.id}`);
+      return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
     // Get profile
@@ -87,9 +95,9 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     };
 
-    // Update active seconds
+    // Update active seconds (max 5 min per heartbeat for safety)
     if (body.active_seconds && body.active_seconds > 0) {
-      updateData.active_seconds = session.active_seconds + Math.min(body.active_seconds, 300); // Max 5 min per heartbeat
+      updateData.active_seconds = session.active_seconds + Math.min(body.active_seconds, 300);
     }
 
     // Update status
@@ -133,7 +141,11 @@ serve(async (req) => {
       }
     }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        ...rateLimitHeaders(rateLimitResult.remaining, rateLimitResult.resetIn, HEARTBEAT_RATE_LIMIT.maxRequests)
+      },
     });
 
   } catch (error) {

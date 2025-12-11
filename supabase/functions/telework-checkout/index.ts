@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { checkRateLimit, rateLimitedResponse, rateLimitHeaders, DEFAULT_RATE_LIMIT } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,6 +39,13 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Rate limiting
+    const rateLimitResult = checkRateLimit(`checkout:${user.id}`, DEFAULT_RATE_LIMIT);
+    if (!rateLimitResult.allowed) {
+      console.log(`Rate limit exceeded for checkout: user ${user.id}`);
+      return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
     // Get profile
@@ -145,7 +153,11 @@ serve(async (req) => {
       }
     }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'application/json',
+        ...rateLimitHeaders(rateLimitResult.remaining, rateLimitResult.resetIn, DEFAULT_RATE_LIMIT.maxRequests)
+      },
     });
 
   } catch (error) {
