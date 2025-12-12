@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import PresidentDashboard from "./pages/PresidentDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import Members from "./pages/Members";
 import Competences from "./pages/Competences";
 import Tasks from "./pages/Tasks";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/president" element={<ProtectedRoute requiredRole="president"><PresidentDashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path="/membres" element={<ProtectedRoute><Members /></ProtectedRoute>} />
             <Route path="/competences" element={<ProtectedRoute><Competences /></ProtectedRoute>} />
             <Route path="/taches" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />

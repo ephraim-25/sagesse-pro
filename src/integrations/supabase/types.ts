@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_matricules: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_used: boolean | null
+          matricule: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          matricule: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_used?: boolean | null
+          matricule?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_matricules_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approvals: {
         Row: {
           acted_at: string | null
@@ -869,6 +904,10 @@ export type Database = {
           p_table_cible: string
         }
         Returns: string
+      }
+      validate_admin_matricule: {
+        Args: { p_matricule: string; p_profile_id: string }
+        Returns: boolean
       }
     }
     Enums: {
