@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Shield, Mail, Lock, User, Building2, Award, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, User, Building2, Award, AlertCircle, Key } from 'lucide-react';
 import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -24,6 +25,14 @@ const signupSchema = z.object({
   prenom: z.string().min(2, 'Prénom requis (minimum 2 caractères)'),
   grade_code: z.string().min(1, 'Veuillez sélectionner un grade'),
   custom_grade: z.string().optional(),
+});
+
+const adminSignupSchema = z.object({
+  email: z.string().email('Email invalide'),
+  password: z.string().min(6, 'Mot de passe: minimum 6 caractères'),
+  nom: z.string().min(2, 'Nom requis (minimum 2 caractères)'),
+  prenom: z.string().min(2, 'Prénom requis (minimum 2 caractères)'),
+  matricule: z.string().regex(/^CSN-2013-\d{3}$/, 'Format matricule invalide (CSN-2013-XXX)'),
 });
 
 // Grades hiérarchiques disponibles
@@ -49,10 +58,50 @@ const Auth = () => {
   const [prenom, setPrenom] = useState('');
   const [gradeCode, setGradeCode] = useState('');
   const [customGrade, setCustomGrade] = useState('');
+  const [isAdminSignup, setIsAdminSignup] = useState(false);
+  const [adminMatricule, setAdminMatricule] = useState('');
+  const [matriculeValid, setMatriculeValid] = useState<boolean | null>(null);
+  const [checkingMatricule, setCheckingMatricule] = useState(false);
 
   const selectedGrade = GRADES.find(g => g.code === gradeCode);
   const requiresApproval = selectedGrade?.requiresApproval ?? false;
   const isCustomGrade = gradeCode === 'custom';
+
+  // Vérifier la disponibilité du matricule
+  const checkMatricule = async (matricule: string) => {
+    if (!matricule || !/^CSN-2013-\d{3}$/.test(matricule)) {
+      setMatriculeValid(null);
+      return;
+    }
+    
+    setCheckingMatricule(true);
+    try {
+      const { data, error } = await supabase
+        .from('admin_matricules')
+        .select('id, is_used')
+        .eq('matricule', matricule)
+        .single();
+
+      if (error || !data) {
+        setMatriculeValid(false);
+      } else {
+        setMatriculeValid(!data.is_used);
+      }
+    } catch {
+      setMatriculeValid(false);
+    } finally {
+      setCheckingMatricule(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (adminMatricule.length >= 12) {
+        checkMatricule(adminMatricule);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [adminMatricule]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -107,6 +156,82 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Admin signup flow
+    if (isAdminSignup) {
+      try {
+        adminSignupSchema.parse({ email, password, nom, prenom, matricule: adminMatricule });
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          toast.error(err.errors[0].message);
+          return;
+        }
+      }
+
+      if (!matriculeValid) {
+        toast.error('Matricule invalide ou déjà utilisé');
+        return;
+      }
+
+      setLoading(true);
+
+      // Create the account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            nom,
+            prenom,
+            grade_code: 'secretaire_permanent', // Admin gets this grade
+            is_admin_registration: true,
+            admin_matricule: adminMatricule,
+          }
+        }
+      });
+
+      if (authError) {
+        toast.error(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Wait a moment for the profile to be created by the trigger
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Get the profile ID
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('auth_id', authData.user?.id)
+        .single();
+
+      if (profileData) {
+        // Validate and mark matricule as used, add admin role
+        const { data: validated } = await supabase.rpc('validate_admin_matricule', {
+          p_matricule: adminMatricule,
+          p_profile_id: profileData.id
+        });
+
+        if (validated) {
+          toast.success('Compte administrateur créé avec succès! Vous pouvez maintenant vous connecter.');
+        } else {
+          toast.error('Erreur lors de la validation du matricule');
+        }
+      }
+
+      // Clear form
+      setEmail('');
+      setPassword('');
+      setNom('');
+      setPrenom('');
+      setAdminMatricule('');
+      setIsAdminSignup(false);
+      setLoading(false);
+      return;
+    }
+
+    // Regular signup flow
     // Validate custom grade if selected
     if (isCustomGrade && (!customGrade || customGrade.trim().length < 2)) {
       toast.error('Veuillez préciser votre grade personnalisé');
@@ -236,6 +361,22 @@ const Auth = () => {
 
               <TabsContent value="signup" className="mt-0">
                 <form onSubmit={handleSignup} className="space-y-4">
+                  {/* Admin registration toggle */}
+                  <div className="flex items-center space-x-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <Checkbox 
+                      id="admin-signup"
+                      checked={isAdminSignup}
+                      onCheckedChange={(checked) => setIsAdminSignup(checked === true)}
+                    />
+                    <Label 
+                      htmlFor="admin-signup" 
+                      className="text-sm font-medium cursor-pointer flex items-center gap-2"
+                    >
+                      <Shield className="w-4 h-4 text-primary" />
+                      Inscription Administrateur (avec matricule)
+                    </Label>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="nom">Nom</Label>
@@ -266,47 +407,100 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="grade">Grade hiérarchique</Label>
-                    <div className="relative">
-                      <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
-                      <Select value={gradeCode} onValueChange={setGradeCode}>
-                        <SelectTrigger className="pl-10">
-                          <SelectValue placeholder="Sélectionnez votre grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {GRADES.map((grade) => (
-                            <SelectItem key={grade.code} value={grade.code}>
-                              {grade.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  {isAdminSignup ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="matricule">Matricule Administrateur</Label>
+                        <div className="relative">
+                          <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="matricule"
+                            type="text"
+                            placeholder="CSN-2013-XXX"
+                            value={adminMatricule}
+                            onChange={(e) => setAdminMatricule(e.target.value.toUpperCase())}
+                            className={`pl-10 ${
+                              matriculeValid === true 
+                                ? 'border-emerald-500 focus-visible:ring-emerald-500' 
+                                : matriculeValid === false 
+                                  ? 'border-destructive focus-visible:ring-destructive' 
+                                  : ''
+                            }`}
+                            required
+                          />
+                          {checkingMatricule && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        {matriculeValid === true && (
+                          <p className="text-sm text-emerald-600 flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                            Matricule valide et disponible
+                          </p>
+                        )}
+                        {matriculeValid === false && (
+                          <p className="text-sm text-destructive flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+                            Matricule invalide ou déjà utilisé
+                          </p>
+                        )}
+                      </div>
 
-                  {isCustomGrade && (
-                    <div className="space-y-2">
-                      <Label htmlFor="custom-grade">Précisez votre grade</Label>
-                      <Input
-                        id="custom-grade"
-                        type="text"
-                        placeholder="Votre grade"
-                        value={customGrade}
-                        onChange={(e) => setCustomGrade(e.target.value)}
-                        required
-                      />
-                    </div>
-                  )}
+                      <Alert className="bg-primary/5 border-primary/20">
+                        <Shield className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-sm">
+                          L'inscription administrateur nécessite un matricule prédéfini au format CSN-2013-XXX.
+                          Contactez le support si vous n'avez pas de matricule.
+                        </AlertDescription>
+                      </Alert>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="grade">Grade hiérarchique</Label>
+                        <div className="relative">
+                          <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+                          <Select value={gradeCode} onValueChange={setGradeCode}>
+                            <SelectTrigger className="pl-10">
+                              <SelectValue placeholder="Sélectionnez votre grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {GRADES.map((grade) => (
+                                <SelectItem key={grade.code} value={grade.code}>
+                                  {grade.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-                  {requiresApproval && (
-                    <Alert className="bg-amber-500/10 border-amber-500/30">
-                      <AlertCircle className="h-4 w-4 text-amber-500" />
-                      <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
-                        Ce grade nécessite une validation par un administrateur. 
-                        Votre compte sera activé après approbation.
-                      </AlertDescription>
-                    </Alert>
+                      {isCustomGrade && (
+                        <div className="space-y-2">
+                          <Label htmlFor="custom-grade">Précisez votre grade</Label>
+                          <Input
+                            id="custom-grade"
+                            type="text"
+                            placeholder="Votre grade"
+                            value={customGrade}
+                            onChange={(e) => setCustomGrade(e.target.value)}
+                            required
+                          />
+                        </div>
+                      )}
+
+                      {requiresApproval && (
+                        <Alert className="bg-amber-500/10 border-amber-500/30">
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                          <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
+                            Ce grade nécessite une validation par un administrateur. 
+                            Votre compte sera activé après approbation.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </>
                   )}
 
                   <div className="space-y-2">
@@ -341,8 +535,12 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={loading || !gradeCode}>
-                    {loading ? 'Création...' : 'Créer un compte'}
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={loading || (isAdminSignup ? !matriculeValid : !gradeCode)}
+                  >
+                    {loading ? 'Création...' : isAdminSignup ? 'Créer un compte administrateur' : 'Créer un compte'}
                   </Button>
                 </form>
               </TabsContent>
