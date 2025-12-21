@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Index from "./pages/Index";
 import PresidentDashboard from "./pages/PresidentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import TeamManagement from "./pages/TeamManagement";
 import Members from "./pages/Members";
 import Competences from "./pages/Competences";
 import Tasks from "./pages/Tasks";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/president" element={<ProtectedRoute requiredRole="president"><PresidentDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/equipes" element={<ProtectedRoute requiredRole="admin"><TeamManagement /></ProtectedRoute>} />
             <Route path="/membres" element={<ProtectedRoute><Members /></ProtectedRoute>} />
             <Route path="/competences" element={<ProtectedRoute><Competences /></ProtectedRoute>} />
             <Route path="/taches" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
