@@ -29,6 +29,7 @@ const mainNavItems = [
   { title: "Tableau de bord", url: "/", icon: LayoutDashboard },
   { title: "Dashboard Président", url: "/president", icon: Building2 },
   { title: "Administration", url: "/admin", icon: Shield },
+  { title: "Équipes", url: "/equipes", icon: Users },
 ];
 
 const managementItems = [
