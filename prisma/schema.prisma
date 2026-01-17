@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  grade     Grade
+  role      Role
+  unitType  UnitType?
+  password  String   @default("hashedpassword") // Added for auth placeholder
+  // Relations
+  tasks     Task[]   @relation("AssignedTasks")
+  createdTasks Task[] @relation("CreatedTasks")
+  attendance Attendance[]
+}
+
+enum Grade {
+  PRESIDENT
+  DIRECTOR
+  BUREAU_CHIEF
+  AGENT
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum UnitType {
+  IT
+  HR
+  FINANCE
+  LEGAL
+}
+
+enum WorkType {
+  REMOTE
+  PHYSICAL
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      WorkType
+  checkIn   DateTime
+  checkOut  DateTime?
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  assigneeId  String
+  assignee    User     @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  creatorId   String
+  creator     User     @relation("CreatedTasks", fields: [creatorId], references: [id])
+  report      Report?
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  taskId    String   @unique
+  task      Task     @relation(fields: [taskId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
