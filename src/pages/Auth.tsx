@@ -67,7 +67,7 @@ const Auth = () => {
   const requiresApproval = selectedGrade?.requiresApproval ?? false;
   const isCustomGrade = gradeCode === 'custom';
 
-  // Vérifier la disponibilité du matricule
+  // Vérifier la disponibilité du matricule via edge function (sécurisé)
   const checkMatricule = async (matricule: string) => {
     if (!matricule || !/^CSN-2013-\d{3}$/.test(matricule)) {
       setMatriculeValid(null);
@@ -76,16 +76,15 @@ const Auth = () => {
     
     setCheckingMatricule(true);
     try {
-      const { data, error } = await supabase
-        .from('admin_matricules')
-        .select('id, is_used')
-        .eq('matricule', matricule)
-        .single();
+      const { data, error } = await supabase.functions.invoke('validate-admin-matricule', {
+        body: { matricule, action: 'check' }
+      });
 
-      if (error || !data) {
+      if (error) {
+        console.error('Matricule check error:', error);
         setMatriculeValid(false);
       } else {
-        setMatriculeValid(!data.is_used);
+        setMatriculeValid(data?.valid === true);
       }
     } catch {
       setMatriculeValid(false);
@@ -197,7 +196,7 @@ const Auth = () => {
       }
 
       // Wait a moment for the profile to be created by the trigger
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Get the profile ID
       const { data: profileData } = await supabase
@@ -207,16 +206,22 @@ const Auth = () => {
         .single();
 
       if (profileData) {
-        // Validate and mark matricule as used, add admin role
-        const { data: validated } = await supabase.rpc('validate_admin_matricule', {
-          p_matricule: adminMatricule,
-          p_profile_id: profileData.id
+        // Get session for auth token
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Validate and mark matricule as used via secure edge function
+        const { data: validateResult, error: validateError } = await supabase.functions.invoke('validate-admin-matricule', {
+          body: { 
+            matricule: adminMatricule, 
+            action: 'use',
+            profile_id: profileData.id 
+          }
         });
 
-        if (validated) {
-          toast.success('Compte administrateur créé avec succès! Vous pouvez maintenant vous connecter.');
-        } else {
+        if (validateError || !validateResult?.success) {
           toast.error('Erreur lors de la validation du matricule');
+        } else {
+          toast.success('Compte administrateur créé avec succès! Vous pouvez maintenant vous connecter.');
         }
       }
 

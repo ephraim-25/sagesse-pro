@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { checkRateLimit, rateLimitedResponse, rateLimitHeaders, STRICT_RATE_LIMIT } from "../_shared/rate-limiter.ts";
+import { sanitizeReason, isValidUUID, pseudonymizeId, sanitizeError } from "../_shared/input-sanitizer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +45,7 @@ serve(async (req) => {
     // Stricter rate limiting for force checkout (sensitive action)
     const rateLimitResult = checkRateLimit(`force-checkout:${user.id}`, STRICT_RATE_LIMIT);
     if (!rateLimitResult.allowed) {
-      console.log(`Rate limit exceeded for force-checkout: user ${user.id}`);
+      console.log(`Rate limit exceeded for force-checkout: user ${pseudonymizeId(user.id)}`);
       return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
@@ -79,11 +80,20 @@ serve(async (req) => {
       });
     }
 
-    // Parse request
-    const body: ForceCheckoutRequest = await req.json();
+    // Parse and validate request
+    let body: ForceCheckoutRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Données invalides' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
-    if (!body.session_id) {
-      return new Response(JSON.stringify({ error: 'session_id requis' }), {
+    // Validate session_id format
+    if (!body.session_id || !isValidUUID(body.session_id)) {
+      return new Response(JSON.stringify({ error: 'session_id invalide' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -117,11 +127,12 @@ serve(async (req) => {
     const checkInTime = new Date(session.check_in);
     const durationSeconds = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / 1000);
 
-    // Update activities
+    // Sanitize reason and build activities
+    const sanitizedReason = sanitizeReason(body.reason, 100);
     const activities = session.activities || [];
     activities.push({
       timestamp: checkOutTime.toISOString(),
-      description: `Checkout forcé par ${managerProfile.nom} ${managerProfile.prenom}${body.reason ? ': ' + body.reason.substring(0, 100) : ''}`,
+      description: `Checkout forcé par manager${sanitizedReason ? ': ' + sanitizedReason : ''}`,
       type: 'force_checkout'
     });
 
@@ -141,21 +152,21 @@ serve(async (req) => {
       .single();
 
     if (updateError) {
-      console.error('Force checkout error:', updateError);
+      console.error('Force checkout error:', sanitizeError(updateError));
       return new Response(JSON.stringify({ error: 'Erreur lors du checkout forcé' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Send notification to user
+    // Send notification to user with sanitized content
     await supabase
       .from('notifications')
       .insert({
         user_id: session.user_id,
         sender_id: managerProfile.id,
         title: 'Session télétravail terminée',
-        body: `Votre session a été terminée par ${managerProfile.nom} ${managerProfile.prenom}.${body.reason ? ' Raison: ' + body.reason : ''}`,
+        body: `Votre session a été terminée par votre responsable.${sanitizedReason ? ' Raison: ' + sanitizedReason : ''}`,
         type: 'force_checkout',
         meta: { session_id: session.id }
       });
@@ -168,11 +179,11 @@ serve(async (req) => {
       p_nouvelle_valeur: { 
         session_id: session.id, 
         forced_by: managerProfile.id,
-        reason: body.reason || null
+        reason: sanitizedReason || null
       }
     });
 
-    console.log(`Force checkout: ${managerProfile.nom} forced checkout for session ${session.id}`);
+    console.log(`Force checkout: manager ${pseudonymizeId(managerProfile.id)} forced checkout for session ${pseudonymizeId(session.id)}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -191,7 +202,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Force checkout error:', error);
+    console.error('Force checkout error:', sanitizeError(error));
     return new Response(JSON.stringify({ error: 'Erreur serveur' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

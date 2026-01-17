@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { checkRateLimit, rateLimitedResponse, rateLimitHeaders, HEARTBEAT_RATE_LIMIT } from "../_shared/rate-limiter.ts";
+import { sanitizeActivity, isValidUUID, isValidStatus, sanitizeNumber, pseudonymizeId, sanitizeError } from "../_shared/input-sanitizer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,8 @@ interface HeartbeatRequest {
   current_status?: 'connecte' | 'pause' | 'reunion';
   activity?: string;
 }
+
+const ALLOWED_STATUSES = ['connecte', 'pause', 'reunion'] as const;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -46,7 +49,7 @@ serve(async (req) => {
     // Rate limiting for heartbeat - higher limit since it's called frequently
     const rateLimitResult = checkRateLimit(`heartbeat:${user.id}`, HEARTBEAT_RATE_LIMIT);
     if (!rateLimitResult.allowed) {
-      console.log(`Rate limit exceeded for heartbeat: user ${user.id}`);
+      console.log(`Rate limit exceeded for heartbeat: user ${pseudonymizeId(user.id)}`);
       return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
@@ -64,11 +67,28 @@ serve(async (req) => {
       });
     }
 
-    // Parse request
-    const body: HeartbeatRequest = await req.json();
+    // Parse and validate request
+    let body: HeartbeatRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Données invalides' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
-    if (!body.session_id) {
-      return new Response(JSON.stringify({ error: 'session_id requis' }), {
+    // Validate session_id format
+    if (!body.session_id || !isValidUUID(body.session_id)) {
+      return new Response(JSON.stringify({ error: 'session_id invalide' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate current_status if provided
+    if (body.current_status !== undefined && !isValidStatus(body.current_status, [...ALLOWED_STATUSES])) {
+      return new Response(JSON.stringify({ error: 'Statut invalide' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -96,21 +116,23 @@ serve(async (req) => {
     };
 
     // Update active seconds (max 5 min per heartbeat for safety)
-    if (body.active_seconds && body.active_seconds > 0) {
-      updateData.active_seconds = session.active_seconds + Math.min(body.active_seconds, 300);
+    const sanitizedSeconds = sanitizeNumber(body.active_seconds, 0, 300);
+    if (sanitizedSeconds !== null && sanitizedSeconds > 0) {
+      updateData.active_seconds = session.active_seconds + sanitizedSeconds;
     }
 
-    // Update status
-    if (body.current_status && ['connecte', 'pause', 'reunion'].includes(body.current_status)) {
+    // Update status (already validated above)
+    if (body.current_status && isValidStatus(body.current_status, [...ALLOWED_STATUSES])) {
       updateData.current_status = body.current_status;
     }
 
-    // Add activity if provided
-    if (body.activity && body.activity.trim()) {
+    // Add activity if provided with sanitization
+    const sanitizedActivity = sanitizeActivity(body.activity, 200);
+    if (sanitizedActivity) {
       const activities = session.activities || [];
       activities.push({
         timestamp: new Date().toISOString(),
-        description: body.activity.substring(0, 200),
+        description: sanitizedActivity,
         type: body.current_status || 'activity'
       });
       updateData.activities = activities;
@@ -125,7 +147,7 @@ serve(async (req) => {
       .single();
 
     if (updateError) {
-      console.error('Heartbeat update error:', updateError);
+      console.error('Heartbeat update error:', sanitizeError(updateError));
       return new Response(JSON.stringify({ error: 'Erreur de mise à jour' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -149,7 +171,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Heartbeat error:', error);
+    console.error('Heartbeat error:', sanitizeError(error));
     return new Response(JSON.stringify({ error: 'Erreur serveur' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

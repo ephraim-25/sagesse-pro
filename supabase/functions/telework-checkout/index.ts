@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { checkRateLimit, rateLimitedResponse, rateLimitHeaders, DEFAULT_RATE_LIMIT } from "../_shared/rate-limiter.ts";
+import { sanitizeActivity, isValidUUID, pseudonymizeId, sanitizeError } from "../_shared/input-sanitizer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +45,7 @@ serve(async (req) => {
     // Rate limiting
     const rateLimitResult = checkRateLimit(`checkout:${user.id}`, DEFAULT_RATE_LIMIT);
     if (!rateLimitResult.allowed) {
-      console.log(`Rate limit exceeded for checkout: user ${user.id}`);
+      console.log(`Rate limit exceeded for checkout: user ${pseudonymizeId(user.id)}`);
       return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
@@ -62,11 +63,20 @@ serve(async (req) => {
       });
     }
 
-    // Parse request
-    const body: CheckoutRequest = await req.json();
+    // Parse and validate request
+    let body: CheckoutRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Données invalides' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
-    if (!body.session_id) {
-      return new Response(JSON.stringify({ error: 'session_id requis' }), {
+    // Validate session_id format
+    if (!body.session_id || !isValidUUID(body.session_id)) {
+      return new Response(JSON.stringify({ error: 'session_id invalide' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -92,12 +102,13 @@ serve(async (req) => {
     const checkInTime = new Date(session.check_in);
     const durationSeconds = Math.floor((checkOutTime.getTime() - checkInTime.getTime()) / 1000);
 
-    // Build update
+    // Build update with sanitized inputs
     const activities = session.activities || [];
-    if (body.final_activity && body.final_activity.trim()) {
+    const sanitizedFinalActivity = sanitizeActivity(body.final_activity, 200);
+    if (sanitizedFinalActivity) {
       activities.push({
         timestamp: checkOutTime.toISOString(),
-        description: body.final_activity.substring(0, 200),
+        description: sanitizedFinalActivity,
         type: 'checkout'
       });
     }
@@ -121,7 +132,7 @@ serve(async (req) => {
       .single();
 
     if (updateError) {
-      console.error('Checkout update error:', updateError);
+      console.error('Checkout update error:', sanitizeError(updateError));
       return new Response(JSON.stringify({ error: 'Erreur lors de la fermeture' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -140,7 +151,7 @@ serve(async (req) => {
       }
     });
 
-    console.log(`Telework checkout: ${profile.nom} ${profile.prenom} - Session ${session.id} - Duration: ${Math.floor(durationSeconds / 60)} min`);
+    console.log(`Telework checkout: user ${pseudonymizeId(profile.id)} - Duration: ${Math.floor(durationSeconds / 60)} min`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -161,7 +172,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Checkout error:', error);
+    console.error('Checkout error:', sanitizeError(error));
     return new Response(JSON.stringify({ error: 'Erreur serveur' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

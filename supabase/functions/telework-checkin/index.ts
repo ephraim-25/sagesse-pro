@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { checkRateLimit, rateLimitedResponse, rateLimitHeaders, DEFAULT_RATE_LIMIT } from "../_shared/rate-limiter.ts";
+import { sanitizeActivity, pseudonymizeId, sanitizeError } from "../_shared/input-sanitizer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +45,7 @@ serve(async (req) => {
     // Rate limiting - use user ID as identifier
     const rateLimitResult = checkRateLimit(`checkin:${user.id}`, DEFAULT_RATE_LIMIT);
     if (!rateLimitResult.allowed) {
-      console.log(`Rate limit exceeded for checkin: user ${user.id}`);
+      console.log(`Rate limit exceeded for checkin: user ${pseudonymizeId(user.id)}`);
       return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
@@ -89,10 +90,18 @@ serve(async (req) => {
       });
     }
 
-    // Parse request body
+    // Parse request body with validation
     let body: CheckinRequest = {};
     try {
-      body = await req.json();
+      const rawBody = await req.json();
+      // Validate input types
+      if (rawBody.activity !== undefined && typeof rawBody.activity !== 'string') {
+        return new Response(JSON.stringify({ error: 'Format activité invalide' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      body = rawBody;
     } catch {
       // Empty body is ok
     }
@@ -108,12 +117,16 @@ serve(async (req) => {
       country = cfCountry;
     }
 
-    // Create telework session
-    const activities = body.activity ? [{
+    // Create telework session with sanitized input
+    const sanitizedActivity = sanitizeActivity(body.activity, 200);
+    const activities = sanitizedActivity ? [{
       timestamp: new Date().toISOString(),
-      description: body.activity.substring(0, 200),
+      description: sanitizedActivity,
       type: 'start'
     }] : [];
+
+    // Sanitize device string
+    const sanitizedDevice = userAgent.substring(0, 200).replace(/[<>]/g, '');
 
     const { data: session, error: sessionError } = await supabase
       .from('telework_sessions')
@@ -121,7 +134,7 @@ serve(async (req) => {
         user_id: profile.id,
         current_status: 'connecte',
         country,
-        device: userAgent.substring(0, 200),
+        device: sanitizedDevice,
         ip_address: forwardedFor?.split(',')[0] || null,
         activities
       })
@@ -129,7 +142,7 @@ serve(async (req) => {
       .single();
 
     if (sessionError) {
-      console.error('Session creation error:', sessionError);
+      console.error('Session creation error:', sanitizeError(sessionError));
       return new Response(JSON.stringify({ error: 'Erreur lors de la création de la session' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -143,7 +156,7 @@ serve(async (req) => {
       p_nouvelle_valeur: { session_id: session.id, check_in: session.check_in }
     });
 
-    console.log(`Telework checkin: ${profile.nom} ${profile.prenom} - Session ${session.id}`);
+    console.log(`Telework checkin: user ${pseudonymizeId(profile.id)} - Session ${pseudonymizeId(session.id)}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -163,7 +176,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Telework checkin error:', error);
+    console.error('Telework checkin error:', sanitizeError(error));
     return new Response(JSON.stringify({ error: 'Erreur serveur' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
