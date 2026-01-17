@@ -48,3 +48,6 @@ verify_jwt = true
 
 [functions.telework-force-checkout]
 verify_jwt = true
+
+[functions.validate-admin-matricule]
+verify_jwt = false
