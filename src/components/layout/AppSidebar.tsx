@@ -59,7 +59,7 @@ export function AppSidebar() {
 
   // Items for chef de service (team management)
   const chefServiceItems = [
-    { title: "Mon Équipe", url: "/equipes", icon: Users },
+    { title: "Mon Bureau", url: "/mon-bureau", icon: Building2 },
     { title: "Compétences", url: "/competences", icon: Target },
   ];
 
