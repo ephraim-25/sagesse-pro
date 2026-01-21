@@ -77,10 +77,14 @@ export function AppSidebar() {
     { title: "Tous les Membres", url: "/membres", icon: Users },
   ];
 
-  // Settings items (for admin/president)
-  const settingsItems = [
-    { title: "Sécurité", url: "/securite", icon: Shield },
+  // Settings items (for all users)
+  const userSettingsItems = [
     { title: "Paramètres", url: "/parametres", icon: Settings },
+  ];
+
+  // Admin-only security items
+  const adminSettingsItems = [
+    { title: "Sécurité", url: "/securite", icon: Shield },
   ];
 
   return (
@@ -243,27 +247,42 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* Footer with settings - Only for Admin/President */}
-      {(isAdmin || isPresident) && (
-        <SidebarFooter className="p-2 border-t border-sidebar-border">
-          <SidebarMenu>
-            {settingsItems.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
-                  <NavLink 
-                    to={item.url}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span className="text-sm">{item.title}</span>
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarFooter>
-      )}
+      {/* Footer with settings - Visible to all users */}
+      <SidebarFooter className="p-2 border-t border-sidebar-border">
+        <SidebarMenu>
+          {/* Admin-only security */}
+          {isAdmin && adminSettingsItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <NavLink 
+                  to={item.url}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm">{item.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+          
+          {/* Settings for all users */}
+          {userSettingsItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild>
+                <NavLink 
+                  to={item.url}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span className="text-sm">{item.title}</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
