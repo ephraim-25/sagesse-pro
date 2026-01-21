@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTaches, useCreateTache, useUpdateTache, useProfiles, type Tache } from "@/hooks/useData";
+import { useAssignableMembers } from "@/hooks/useHierarchy";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -72,6 +73,7 @@ const Tasks = () => {
 
   const { data: tasks, isLoading } = useTaches();
   const { data: profiles } = useProfiles();
+  const { data: assignableMembers } = useAssignableMembers();
   const createTask = useCreateTache();
   const updateTask = useUpdateTache();
 
@@ -352,21 +354,27 @@ const Tasks = () => {
               </div>
               <div className="space-y-2">
                 <Label>Assigné à</Label>
-                <Select
-                  value={newTask.assigned_to}
-                  onValueChange={(value) => setNewTask(prev => ({ ...prev, assigned_to: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un membre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles?.map(profile => (
-                      <SelectItem key={profile.id} value={profile.id}>
-                        {profile.prenom} {profile.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {assignableMembers && assignableMembers.length > 0 ? (
+                  <Select
+                    value={newTask.assigned_to}
+                    onValueChange={(value) => setNewTask(prev => ({ ...prev, assigned_to: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un membre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignableMembers.map((profile: any) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.prenom} {profile.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground p-2 bg-muted rounded">
+                    Vous n'avez aucun agent dans votre bureau. Affectez des agents depuis "Mon Bureau".
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
