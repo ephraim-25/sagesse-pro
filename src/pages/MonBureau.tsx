@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Users, 
   UserPlus, 
@@ -17,7 +20,11 @@ import {
   Briefcase,
   AlertCircle,
   CheckCircle2,
-  Building2
+  Building2,
+  Plus,
+  ListTodo,
+  Calendar,
+  TrendingUp
 } from "lucide-react";
 import { 
   useMyTeamMembers, 
@@ -27,6 +34,7 @@ import {
   type TeamMember 
 } from "@/hooks/useHierarchy";
 import { useAuth } from "@/hooks/useAuth";
+import { useTaches, useCreateTache } from "@/hooks/useData";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -38,17 +46,49 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const MonBureau = () => {
   const { profile, isChefService } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAgent, setSelectedAgent] = useState<TeamMember | null>(null);
   const [actionType, setActionType] = useState<'assign' | 'remove' | null>(null);
+  const [showTaskDialog, setShowTaskDialog] = useState(false);
+  const [newTask, setNewTask] = useState({
+    titre: '',
+    description: '',
+    priorite: 'moyen' as 'faible' | 'moyen' | 'eleve' | 'urgente',
+    assigned_to: '',
+    date_limite: ''
+  });
 
   const { data: teamMembers, isLoading: loadingTeam } = useMyTeamMembers();
   const { data: unassignedAgents, isLoading: loadingUnassigned } = useUnassignedAgents();
+  const { data: allTasks } = useTaches();
   const assignToTeam = useAssignToTeam();
   const removeFromTeam = useRemoveFromTeam();
+  const createTache = useCreateTache();
+
+  // Filter tasks for this bureau (created by current user or assigned to team members)
+  const teamMemberIds = teamMembers?.map(m => m.id) || [];
+  const bureauTasks = allTasks?.filter(t => 
+    t.created_by === profile?.id || teamMemberIds.includes(t.assigned_to || '')
+  ) || [];
+  
+  const pendingTasks = bureauTasks.filter(t => t.statut === 'a_faire' || t.statut === 'en_cours');
+  const completedTasks = bureauTasks.filter(t => t.statut === 'termine');
+  const overdueTasks = bureauTasks.filter(t => {
+    if (!t.date_limite) return false;
+    return new Date(t.date_limite) < new Date() && t.statut !== 'termine';
+  });
 
   const filteredTeamMembers = teamMembers?.filter(member => 
     member.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,6 +131,38 @@ const MonBureau = () => {
       handleAssign(selectedAgent);
     } else if (actionType === 'remove') {
       handleRemove(selectedAgent);
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTask.titre.trim()) {
+      toast.error('Le titre est requis');
+      return;
+    }
+    if (!newTask.assigned_to) {
+      toast.error('Veuillez sélectionner un agent');
+      return;
+    }
+
+    try {
+      await createTache.mutateAsync({
+        titre: newTask.titre,
+        description: newTask.description || null,
+        priorite: newTask.priorite,
+        assigned_to: newTask.assigned_to,
+        date_limite: newTask.date_limite || null
+      });
+      toast.success('Tâche créée avec succès');
+      setShowTaskDialog(false);
+      setNewTask({
+        titre: '',
+        description: '',
+        priorite: 'moyen',
+        assigned_to: '',
+        date_limite: ''
+      });
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la création');
     }
   };
 
@@ -203,7 +275,7 @@ const MonBureau = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -223,7 +295,31 @@ const MonBureau = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{unassignedAgents?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Agents disponibles</p>
+                <p className="text-sm text-muted-foreground">Disponibles</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <ListTodo className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{pendingTasks.length}</p>
+                <p className="text-sm text-muted-foreground">Tâches en cours</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{overdueTasks.length}</p>
+                <p className="text-sm text-muted-foreground">En retard</p>
               </div>
             </CardContent>
           </Card>
@@ -231,25 +327,127 @@ const MonBureau = () => {
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-info" />
+                <TrendingUp className="w-6 h-6 text-info" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{profile?.service || '-'}</p>
-                <p className="text-sm text-muted-foreground">Service</p>
+                <p className="text-2xl font-bold">{completedTasks.length}</p>
+                <p className="text-sm text-muted-foreground">Terminées</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Rechercher un agent..." 
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        {/* Actions Bar */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Search */}
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Rechercher un agent..." 
+              className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Create Task Button - Only for Bureau Chiefs with agents */}
+          <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
+            <DialogTrigger asChild>
+              <Button 
+                disabled={!teamMembers?.length}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nouvelle Tâche
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Créer une nouvelle tâche</DialogTitle>
+                <DialogDescription>
+                  Assignez une tâche à un agent de votre bureau
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="titre">Titre *</Label>
+                  <Input
+                    id="titre"
+                    placeholder="Titre de la tâche"
+                    value={newTask.titre}
+                    onChange={(e) => setNewTask({ ...newTask, titre: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Description détaillée..."
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Agent *</Label>
+                    <Select 
+                      value={newTask.assigned_to} 
+                      onValueChange={(v) => setNewTask({ ...newTask, assigned_to: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teamMembers?.map((member) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.prenom} {member.nom}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Priorité</Label>
+                    <Select 
+                      value={newTask.priorite} 
+                      onValueChange={(v: any) => setNewTask({ ...newTask, priorite: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="faible">Faible</SelectItem>
+                        <SelectItem value="moyen">Moyen</SelectItem>
+                        <SelectItem value="eleve">Élevé</SelectItem>
+                        <SelectItem value="urgente">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date_limite">Date limite</Label>
+                  <Input
+                    id="date_limite"
+                    type="date"
+                    value={newTask.date_limite}
+                    onChange={(e) => setNewTask({ ...newTask, date_limite: e.target.value })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowTaskDialog(false)}>
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleCreateTask}
+                  disabled={createTache.isPending}
+                >
+                  {createTache.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Créer la tâche
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Tabs */}
