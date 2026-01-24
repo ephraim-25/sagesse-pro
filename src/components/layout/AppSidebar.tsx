@@ -46,7 +46,7 @@ export function AppSidebar() {
 
   // Navigation items visible to all authenticated users (agents)
   const agentNavItems = [
-    { title: "Mon Tableau de bord", url: "/", icon: LayoutDashboard },
+    { title: "Mon Tableau de bord", url: "/agent", icon: LayoutDashboard },
     { title: "Mes Tâches", url: "/taches", icon: ListTodo },
   ];
 
@@ -60,13 +60,14 @@ export function AppSidebar() {
   // Items for chef de service (team management)
   const chefServiceItems = [
     { title: "Mon Bureau", url: "/mon-bureau", icon: Building2 },
+    { title: "Supervision Division", url: "/division", icon: UserCog },
     { title: "Compétences", url: "/competences", icon: Target },
   ];
 
   // President-specific items (strategic view)
   const presidentItems = [
     { title: "Dashboard Stratégique", url: "/president", icon: Crown },
-    { title: "Performance Globale", url: "/performance", icon: BarChart3 },
+    { title: "Statistiques Globales", url: "/stats", icon: BarChart3 },
     { title: "Rapports & Audit", url: "/rapports", icon: FileText },
   ];
 

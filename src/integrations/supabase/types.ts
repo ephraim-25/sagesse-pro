@@ -874,6 +874,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_assign_task_to: {
+        Args: { _auth_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       can_manage_user: {
         Args: { _auth_id: string; _target_user_id: string }
         Returns: boolean

@@ -5,8 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import DashboardRouter from "@/components/DashboardRouter";
 import Auth from "./pages/Auth";
-import Index from "./pages/Index";
+import AgentDashboard from "./pages/AgentDashboard";
+import ChefDivisionDashboard from "./pages/ChefDivisionDashboard";
 import PresidentDashboard from "./pages/PresidentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import TeamManagement from "./pages/TeamManagement";
@@ -35,11 +37,21 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            
+            {/* Dashboard Router - redirects based on role */}
+            <Route path="/" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
+            
+            {/* Role-specific dashboards */}
+            <Route path="/agent" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
+            <Route path="/mon-bureau" element={<ProtectedRoute requiredRole="chef_service"><MonBureau /></ProtectedRoute>} />
+            <Route path="/division" element={<ProtectedRoute requiredRole="chef_service"><ChefDivisionDashboard /></ProtectedRoute>} />
             <Route path="/president" element={<ProtectedRoute requiredRole="president"><PresidentDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            
+            {/* Admin-only management */}
             <Route path="/equipes" element={<ProtectedRoute requiredRole="admin"><TeamManagement /></ProtectedRoute>} />
-            <Route path="/mon-bureau" element={<ProtectedRoute requiredRole="chef_service"><MonBureau /></ProtectedRoute>} />
+            
+            {/* Common routes */}
             <Route path="/membres" element={<ProtectedRoute><Members /></ProtectedRoute>} />
             <Route path="/competences" element={<ProtectedRoute><Competences /></ProtectedRoute>} />
             <Route path="/taches" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
