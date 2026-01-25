@@ -13,7 +13,9 @@ import {
   Crown,
   UserCog,
   Clock,
-  Target
+  Target,
+  UserPlus,
+  ClipboardList
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,16 +40,26 @@ export function AppSidebar() {
   const getUserRoleLabel = () => {
     if (isAdmin) return { label: "Administrateur", variant: "destructive" as const };
     if (hasRole('president')) return { label: "Président", variant: "default" as const };
-    if (hasRole('chef_service')) return { label: "Chef de Service", variant: "secondary" as const };
+    if (hasRole('chef_service')) return { label: "Chef de Bureau", variant: "secondary" as const };
     return { label: "Agent", variant: "outline" as const };
   };
 
   const roleInfo = getUserRoleLabel();
 
-  // Navigation items visible to all authenticated users (agents)
+  // Check if user can access settings (only admin and president/SP)
+  const canAccessSettings = isAdmin || isPresident;
+
+  // Navigation items for agents (simple space)
   const agentNavItems = [
     { title: "Mon Tableau de bord", url: "/agent", icon: LayoutDashboard },
     { title: "Mes Tâches", url: "/taches", icon: ListTodo },
+  ];
+
+  // Navigation items for Chef de Bureau - specific "Mon Bureau" section
+  const bureauChefItems = [
+    { title: "Pilotage du Bureau", url: "/mon-bureau", icon: Building2 },
+    { title: "Affectation des Agents", url: "/mon-bureau?tab=available", icon: UserPlus },
+    { title: "Assigner une Tâche", url: "/mon-bureau?tab=tasks", icon: ClipboardList },
   ];
 
   // Presence items for agents
@@ -57,9 +69,8 @@ export function AppSidebar() {
     { title: "Mon Historique", url: "/historique", icon: Calendar },
   ];
 
-  // Items for chef de service (team management)
-  const chefServiceItems = [
-    { title: "Mon Bureau", url: "/mon-bureau", icon: Building2 },
+  // Items for chef de division (supervision)
+  const chefDivisionItems = [
     { title: "Supervision Division", url: "/division", icon: UserCog },
     { title: "Compétences", url: "/competences", icon: Target },
   ];
@@ -76,11 +87,6 @@ export function AppSidebar() {
     { title: "Administration", url: "/admin", icon: Shield },
     { title: "Gestion Équipes", url: "/equipes", icon: UserCog },
     { title: "Tous les Membres", url: "/membres", icon: Users },
-  ];
-
-  // Settings items (for all users)
-  const userSettingsItems = [
-    { title: "Paramètres", url: "/parametres", icon: Settings },
   ];
 
   // Admin-only security items
@@ -111,31 +117,61 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
-        {/* Agent Section - Visible to all */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3 mb-2">
-            Mon Espace
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {agentNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      end={item.url === "/"} 
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span className="text-sm">{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Chef de Bureau specific section - replaces "Mon Espace" */}
+        {isChefService && !isAdmin && !isPresident && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3 mb-2">
+              <Building2 className="w-3 h-3 inline mr-1" />
+              Mon Bureau
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {bureauChefItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span className="text-sm">{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Agent Section - Visible to agents only (not chef de bureau) */}
+        {!isChefService && !isAdmin && !isPresident && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3 mb-2">
+              Mon Espace
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {agentNavItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        end={item.url === "/"} 
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span className="text-sm">{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Presence Section - Visible to all */}
         <SidebarGroup>
@@ -163,16 +199,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Chef de Service Section */}
+        {/* Chef de Division Section - additional supervision items */}
         {isChefService && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3 mb-2 mt-4">
               <UserCog className="w-3 h-3 inline mr-1" />
-              Gestion d'Équipe
+              Supervision
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {chefServiceItems.map((item) => (
+                {chefDivisionItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink 
@@ -248,42 +284,42 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      {/* Footer with settings - Visible to all users */}
-      <SidebarFooter className="p-2 border-t border-sidebar-border">
-        <SidebarMenu>
-          {/* Admin-only security */}
-          {isAdmin && adminSettingsItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
+      {/* Footer with settings - Only for Admin and President */}
+      {canAccessSettings && (
+        <SidebarFooter className="p-2 border-t border-sidebar-border">
+          <SidebarMenu>
+            {/* Admin-only security */}
+            {isAdmin && adminSettingsItems.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <NavLink 
+                    to={item.url}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span className="text-sm">{item.title}</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+            
+            {/* Settings for Admin and President only */}
+            <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <NavLink 
-                  to={item.url}
+                  to="/parametres"
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
                   activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                 >
-                  <item.icon className="w-4 h-4" />
-                  <span className="text-sm">{item.title}</span>
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm">Paramètres</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          ))}
-          
-          {/* Settings for all users */}
-          {userSettingsItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <NavLink 
-                  to={item.url}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                >
-                  <item.icon className="w-4 h-4" />
-                  <span className="text-sm">{item.title}</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarFooter>
+          </SidebarMenu>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
