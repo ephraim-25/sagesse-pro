@@ -27,7 +27,8 @@ import {
   TrendingUp,
   Target,
   Clock,
-  Sparkles
+  Sparkles,
+  FileDown
 } from "lucide-react";
 import { 
   useMyTeamMembers, 
@@ -291,7 +292,7 @@ const MonBureau = () => {
               <Building2 className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="page-title">Pilotage du Bureau</h1>
+              <h1 className="page-title">Mon Bureau : Gestion des Affectations</h1>
               <p className="page-description">
                 Bienvenue, Chef {profile?.nom} — Gérez vos agents et leurs missions
               </p>
@@ -455,15 +456,15 @@ const MonBureau = () => {
             </Tabs>
           </div>
 
-          {/* Right Column - Mes Agents Affectés (interactive list) */}
+          {/* Right Column - Mon Bureau: Gestion des Affectations */}
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Mes Agents Affectés
+                  <Building2 className="w-4 h-4" />
+                  Mon Bureau : Gestion des Affectations
                 </CardTitle>
-                <CardDescription>Vue rapide de votre équipe</CardDescription>
+                <CardDescription>Vue rapide de votre équipe - cliquez pour affecter</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {loadingTeam ? (
@@ -525,7 +526,7 @@ const MonBureau = () => {
                       disabled={!teamMembers?.length}
                     >
                       <Plus className="w-4 h-4" />
-                      Assigner une Mission
+                      Assigner une Tâche à un Agent
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[500px]">

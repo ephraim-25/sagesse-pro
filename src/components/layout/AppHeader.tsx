@@ -18,7 +18,7 @@ export function AppHeader() {
   const { profile, signOut, isAdmin, isPresident, hasRole } = useAuth();
   const navigate = useNavigate();
 
-  // Determine user's display role
+  // Determine user's display role - more specific labels
   const getUserRoleLabel = () => {
     if (isAdmin) return "Administrateur";
     if (hasRole('president')) return "Président";
@@ -39,8 +39,8 @@ export function AppHeader() {
     ? `${profile.prenom?.[0] || ''}${profile.nom?.[0] || ''}`.toUpperCase()
     : "U";
 
-  // Only admin and president can access settings
-  const canAccessSettings = isAdmin || isPresident;
+  // Only admin can access settings (strictest access)
+  const canAccessSettings = isAdmin;
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">

@@ -144,7 +144,7 @@ const AgentDashboard = () => {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="page-header">
-          <h1 className="page-title">Mon Espace de Travail</h1>
+          <h1 className="page-title">SIGC-CSN - Mon Espace</h1>
           <p className="page-description">
             Bonjour {profile?.prenom}, gérez votre présence et vos tâches
           </p>

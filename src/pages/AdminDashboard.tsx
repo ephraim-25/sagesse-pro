@@ -246,27 +246,33 @@ const AdminDashboard = () => {
     <AppLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
               <Shield className="w-8 h-8 text-primary" />
-              Administration
+              SIGC-CSN Administration
             </h1>
             <p className="text-muted-foreground mt-1">
               Gestion des comptes, approbations et supervision de la plateforme
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
-              queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-            }}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Exporter le Rapport Journalier (PDF)
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['pending-approvals'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+              }}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Actualiser
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

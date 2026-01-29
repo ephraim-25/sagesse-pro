@@ -34,17 +34,24 @@ const PresidentDashboard = () => {
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Sagesse-Pro</h1>
-                <p className="text-muted-foreground">Tableau de Bord Exécutif</p>
+                <h1 className="text-2xl font-bold text-foreground">SIGC-CSN</h1>
+                <p className="text-muted-foreground">Système Intégré de Gestion du Conseil</p>
               </div>
             </div>
             
-            {/* Report Generation Button */}
-            <Button className="gap-2 bg-slate-800 hover:bg-slate-700 text-white shadow-lg">
-              <FileText className="w-4 h-4" />
-              Générer le Rapport Hebdomadaire
-              <Download className="w-4 h-4" />
-            </Button>
+            {/* Report Generation Buttons */}
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" className="gap-2">
+                <FileText className="w-4 h-4" />
+                Exporter le Rapport Journalier (PDF)
+                <Download className="w-4 h-4" />
+              </Button>
+              <Button className="gap-2 bg-slate-800 hover:bg-slate-700 text-white shadow-lg">
+                <FileText className="w-4 h-4" />
+                Générer le Rapport Hebdomadaire
+                <Download className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
