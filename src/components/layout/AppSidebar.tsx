@@ -46,8 +46,8 @@ export function AppSidebar() {
 
   const roleInfo = getUserRoleLabel();
 
-  // Check if user can access settings (only admin and president/SP)
-  const canAccessSettings = isAdmin || isPresident;
+  // Check if user can access settings (only admin - strictest access)
+  const canAccessSettings = isAdmin;
 
   // Navigation items for agents (simple space)
   const agentNavItems = [
@@ -102,7 +102,7 @@ export function AppSidebar() {
             <Building2 className="w-5 h-5 text-accent-foreground" />
           </div>
           <div className="flex-1">
-            <h1 className="font-bold text-sidebar-foreground text-sm">Sagesse-Pro</h1>
+            <h1 className="font-bold text-sidebar-foreground text-sm">SIGC-CSN</h1>
             <p className="text-xs text-sidebar-foreground/60">Conseil Scientifique</p>
           </div>
         </div>
