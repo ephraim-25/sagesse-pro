@@ -29,13 +29,13 @@ const DashboardRouter = () => {
     return <Navigate to="/president" replace />;
   }
 
-  // Chef de Division → Could have a specific dashboard in future
-  if (isChefDivision && grade?.code === 'chef_division') {
+  // Chef de Division → Supervision dashboard
+  if (grade?.code === 'chef_division') {
     return <Navigate to="/division" replace />;
   }
 
-  // Chef de Bureau or Chef de Service role → Management dashboard
-  if (isChefService || isChefBureau) {
+  // Chef de Bureau → Management dashboard
+  if (grade?.code === 'chef_bureau' || isChefService || isChefBureau) {
     return <Navigate to="/mon-bureau" replace />;
   }
 
