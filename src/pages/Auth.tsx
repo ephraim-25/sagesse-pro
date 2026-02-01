@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import logoCsn from '@/assets/logo-csn.png';
+import { ensureProfileHasGrade } from '@/lib/profileSync';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -64,6 +65,9 @@ const Auth = () => {
   const [matriculeValid, setMatriculeValid] = useState<boolean | null>(null);
   const [checkingMatricule, setCheckingMatricule] = useState(false);
 
+  // Prevent auto-redirect on SIGNED_IN during post-signup synchronization.
+  const postSignupSyncingRef = useRef(false);
+
   const selectedGrade = GRADES.find(g => g.code === gradeCode);
   const requiresApproval = selectedGrade?.requiresApproval ?? false;
   const isCustomGrade = gradeCode === 'custom';
@@ -106,13 +110,17 @@ const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate('/');
+        if (!postSignupSyncingRef.current) {
+          navigate('/');
+        }
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate('/');
+        if (!postSignupSyncingRef.current) {
+          navigate('/');
+        }
       }
     });
 
@@ -267,8 +275,9 @@ const Auth = () => {
     }
 
     setLoading(true);
+    postSignupSyncingRef.current = true;
     
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -290,22 +299,62 @@ const Auth = () => {
       } else {
         toast.error(error.message);
       }
-    } else {
-      if (requiresApproval) {
-        toast.success('Compte créé! Votre demande est en attente d\'approbation par un administrateur.');
-      } else {
-        toast.success('Compte créé avec succès! Vous pouvez maintenant vous connecter.');
-      }
-      // Clear form
-      setEmail('');
-      setPassword('');
-      setNom('');
-      setPrenom('');
-      setGradeCode('');
-      setCustomGrade('');
+      postSignupSyncingRef.current = false;
+      setLoading(false);
+      return;
     }
-    
+
+    // If no session (email confirmation required), we can't sync/profile-update immediately.
+    if (!authData?.session || !authData.user?.id) {
+      toast.success(
+        "Compte créé. Veuillez confirmer votre email, puis connectez-vous pour activer vos droits."
+      );
+      postSignupSyncingRef.current = false;
+      setLoading(false);
+      return;
+    }
+
+    // Ensure grade is actually written in `profiles.grade_id` and validated.
+    try {
+      await ensureProfileHasGrade({
+        authId: authData.user.id,
+        gradeCode,
+        customGrade: isCustomGrade ? customGrade : null,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue.";
+      toast.error(
+        `Inscription créée, mais échec de configuration du grade: ${message}`
+      );
+      // Safety: avoid landing in an inconsistent permission state.
+      await supabase.auth.signOut();
+      postSignupSyncingRef.current = false;
+      setLoading(false);
+      return;
+    }
+
+    // Force immediate re-fetch of the profile/grade in AuthProvider (via TOKEN_REFRESHED event).
+    await supabase.auth.refreshSession();
+
+    if (requiresApproval) {
+      toast.success(
+        "Compte créé! Votre demande est en attente d'approbation par un administrateur."
+      );
+    } else {
+      toast.success('Compte créé avec succès! Redirection en cours...');
+    }
+
+    // Clear form
+    setEmail('');
+    setPassword('');
+    setNom('');
+    setPrenom('');
+    setGradeCode('');
+    setCustomGrade('');
+
+    postSignupSyncingRef.current = false;
     setLoading(false);
+    navigate('/');
   };
 
   return (
