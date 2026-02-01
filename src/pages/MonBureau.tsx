@@ -28,8 +28,10 @@ import {
   Target,
   Clock,
   Sparkles,
-  FileDown
+  FileDown,
+  Download
 } from "lucide-react";
+import logoCsn from "@/assets/logo-csn.png";
 import { 
   useMyTeamMembers, 
   useUnassignedAgents, 
@@ -39,6 +41,7 @@ import {
 } from "@/hooks/useHierarchy";
 import { useAuth } from "@/hooks/useAuth";
 import { useTaches, useCreateTache } from "@/hooks/useData";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -93,6 +96,7 @@ const MonBureau = () => {
   const assignToTeam = useAssignToTeam();
   const removeFromTeam = useRemoveFromTeam();
   const createTache = useCreateTache();
+  const { exportDailyPresenceReport, exportTasksReport } = usePdfExport();
 
   // Filter tasks for this bureau (created by current user or assigned to team members)
   const teamMemberIds = teamMembers?.map(m => m.id) || [];
@@ -518,6 +522,14 @@ const MonBureau = () => {
                 >
                   <UserPlus className="w-4 h-4" />
                   Enrôler un Agent
+                </Button>
+                <Button 
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                  onClick={() => exportDailyPresenceReport()}
+                >
+                  <Download className="w-4 h-4" />
+                  Exporter Rapport Journalier
                 </Button>
                 <Dialog open={showTaskDialog} onOpenChange={setShowTaskDialog}>
                   <DialogTrigger asChild>

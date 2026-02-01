@@ -3,6 +3,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { InteractiveOrgChart } from "@/components/orgchart/InteractiveOrgChart";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { DepartmentRadar } from "@/components/dashboard/DepartmentRadar";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { 
   Users, 
   AlertTriangle, 
@@ -17,6 +18,7 @@ import logoCsn from "@/assets/logo-csn.png";
 
 const PresidentDashboard = () => {
   const { data: dashboardData, isLoading } = useDashboardData();
+  const { exportDailyPresenceReport, exportTasksReport, exportPerformanceReport } = usePdfExport();
 
   const presenceRate = dashboardData?.overview.totalMembers 
     ? Math.round(((dashboardData.overview.presents + dashboardData.overview.teletravail) / dashboardData.overview.totalMembers) * 100)
@@ -42,12 +44,19 @@ const PresidentDashboard = () => {
             
             {/* Report Generation Buttons */}
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" className="gap-2">
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={() => exportDailyPresenceReport()}
+              >
                 <FileText className="w-4 h-4" />
                 Exporter le Rapport Journalier (PDF)
                 <Download className="w-4 h-4" />
               </Button>
-              <Button className="gap-2 bg-slate-800 hover:bg-slate-700 text-white shadow-lg">
+              <Button 
+                className="gap-2 bg-slate-800 hover:bg-slate-700 text-white shadow-lg"
+                onClick={() => exportPerformanceReport()}
+              >
                 <FileText className="w-4 h-4" />
                 Générer le Rapport Hebdomadaire
                 <Download className="w-4 h-4" />

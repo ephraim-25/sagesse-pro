@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePdfExport } from '@/hooks/usePdfExport';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,8 +27,10 @@ import {
   TrendingUp,
   Building2,
   Key,
-  RefreshCw
+  RefreshCw,
+  Download
 } from 'lucide-react';
+import logoCsn from '@/assets/logo-csn.png';
 
 interface PendingApproval {
   id: string;
@@ -75,6 +78,7 @@ interface AuditLog {
 const AdminDashboard = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const { exportDailyPresenceReport, exportTasksReport, exportPerformanceReport } = usePdfExport();
   const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
   const [comment, setComment] = useState('');
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
@@ -247,18 +251,26 @@ const AdminDashboard = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-              <Shield className="w-8 h-8 text-primary" />
-              SIGC-CSN Administration
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Gestion des comptes, approbations et supervision de la plateforme
-            </p>
+          <div className="flex items-center gap-3">
+            <img 
+              src={logoCsn} 
+              alt="Logo CSN" 
+              className="w-12 h-12 object-contain"
+            />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">SIGC-CSN Administration</h1>
+              <p className="text-muted-foreground">
+                Gestion des comptes, approbations et supervision de la plateforme
+              </p>
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" className="gap-2">
-              <FileText className="w-4 h-4" />
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => exportDailyPresenceReport()}
+            >
+              <Download className="w-4 h-4" />
               Exporter le Rapport Journalier (PDF)
             </Button>
             <Button 
