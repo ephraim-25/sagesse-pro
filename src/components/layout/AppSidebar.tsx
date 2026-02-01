@@ -9,7 +9,6 @@ import {
   Calendar,
   Laptop,
   FileText,
-  Building2,
   Crown,
   UserCog,
   Clock,
@@ -32,6 +31,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import logoCsn from "@/assets/logo-csn.png";
 
 export function AppSidebar() {
   const { isAdmin, isPresident, isChefService, hasRole, profile } = useAuth();
@@ -57,7 +57,7 @@ export function AppSidebar() {
 
   // Navigation items for Chef de Bureau - specific "Mon Bureau" section
   const bureauChefItems = [
-    { title: "Pilotage du Bureau", url: "/mon-bureau", icon: Building2 },
+    { title: "Pilotage du Bureau", url: "/mon-bureau", icon: LayoutDashboard },
     { title: "Affectation des Agents", url: "/mon-bureau?tab=available", icon: UserPlus },
     { title: "Assigner une Tâche", url: "/mon-bureau?tab=tasks", icon: ClipboardList },
   ];
@@ -98,9 +98,11 @@ export function AppSidebar() {
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg gradient-accent flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-accent-foreground" />
-          </div>
+          <img 
+            src={logoCsn} 
+            alt="Logo CSN" 
+            className="w-10 h-10 object-contain"
+          />
           <div className="flex-1">
             <h1 className="font-bold text-sidebar-foreground text-sm">SIGC-CSN</h1>
             <p className="text-xs text-sidebar-foreground/60">Conseil Scientifique</p>
@@ -121,7 +123,7 @@ export function AppSidebar() {
         {isChefService && !isAdmin && !isPresident && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-3 mb-2">
-              <Building2 className="w-3 h-3 inline mr-1" />
+              <LayoutDashboard className="w-3 h-3 inline mr-1" />
               Mon Bureau
             </SidebarGroupLabel>
             <SidebarGroupContent>

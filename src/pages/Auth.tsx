@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Shield, Mail, Lock, User, Building2, Award, AlertCircle, Key } from 'lucide-react';
+import { Shield, Mail, Lock, User, Award, AlertCircle, Key } from 'lucide-react';
 import { z } from 'zod';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import logoCsn from '@/assets/logo-csn.png';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -305,12 +306,14 @@ const Auth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-            <Shield className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">SIGC</h1>
+          <img 
+            src={logoCsn} 
+            alt="Logo Conseil Scientifique National" 
+            className="w-20 h-20 mx-auto mb-4 object-contain"
+          />
+          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN</h1>
           <p className="text-muted-foreground mt-2">
-            Système Intelligent de Gestion du Conseil
+            Système Intégré de Gestion du Conseil
           </p>
         </div>
 
@@ -554,7 +557,6 @@ const Auth = () => {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-6">
-          <Building2 className="inline w-4 h-4 mr-1" />
           Conseil Scientifique National
         </p>
       </div>
