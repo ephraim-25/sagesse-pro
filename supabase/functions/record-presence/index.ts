@@ -28,8 +28,8 @@ function validatePresenceInput(data: unknown): { valid: true; data: PresenceRequ
 
   // Validate optional string fields with length limits
   if (input.appareil !== undefined) {
-    if (typeof input.appareil !== 'string' || input.appareil.length > 100) {
-      return { valid: false, error: 'Appareil doit être une chaîne de 100 caractères max' };
+    if (typeof input.appareil !== 'string' || input.appareil.length > 256) {
+      return { valid: false, error: 'Appareil doit être une chaîne de 256 caractères max' };
     }
   }
 
