@@ -13,6 +13,53 @@ interface PresenceRequest {
   justification_retard?: string;
 }
 
+// Get current time in Kinshasa timezone (Africa/Kinshasa = UTC+1)
+function getKinshasaTime(): { hours: number; minutes: number } {
+  const now = new Date();
+  // Kinshasa is UTC+1 (no DST)
+  const kinshasaOffset = 1 * 60; // +1 hour in minutes
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const kinshasaMinutes = utcMinutes + kinshasaOffset;
+  
+  // Handle day overflow
+  const adjustedMinutes = ((kinshasaMinutes % 1440) + 1440) % 1440;
+  
+  return {
+    hours: Math.floor(adjustedMinutes / 60),
+    minutes: adjustedMinutes % 60
+  };
+}
+
+// Validate time restrictions for check-in/check-out
+function validateTimeRestrictions(type: 'entree' | 'sortie'): { allowed: boolean; message?: string } {
+  const { hours, minutes } = getKinshasaTime();
+  const currentTimeMinutes = hours * 60 + minutes;
+  
+  if (type === 'entree') {
+    // Check-in allowed until 09:00 (9 * 60 = 540 minutes)
+    const cutoffMinutes = 9 * 60;
+    if (currentTimeMinutes > cutoffMinutes) {
+      const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      return { 
+        allowed: false, 
+        message: `Le pointage d'entrée n'est plus disponible après 09h00 (heure actuelle: ${formattedTime})` 
+      };
+    }
+  } else if (type === 'sortie') {
+    // Check-out allowed from 16:00 (16 * 60 = 960 minutes)
+    const startMinutes = 16 * 60;
+    if (currentTimeMinutes < startMinutes) {
+      const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      return { 
+        allowed: false, 
+        message: `Le pointage de sortie n'est disponible qu'à partir de 16h00 (heure actuelle: ${formattedTime})` 
+      };
+    }
+  }
+  
+  return { allowed: true };
+}
+
 // Input validation function
 function validatePresenceInput(data: unknown): { valid: true; data: PresenceRequest } | { valid: false; error: string } {
   if (!data || typeof data !== 'object') {
@@ -107,6 +154,17 @@ serve(async (req) => {
     }
 
     const { type, appareil, localisation, justification_retard } = validation.data;
+
+    // Validate time restrictions
+    const timeRestriction = validateTimeRestrictions(type);
+    if (!timeRestriction.allowed) {
+      console.log(`Time restriction: ${timeRestriction.message}`);
+      return new Response(
+        JSON.stringify({ success: false, error: timeRestriction.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toISOString();
 
