@@ -11,6 +11,7 @@ import AgentDashboard from "./pages/AgentDashboard";
 import ChefDivisionDashboard from "./pages/ChefDivisionDashboard";
 import PresidentDashboard from "./pages/PresidentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
 import TeamManagement from "./pages/TeamManagement";
 import MonBureau from "./pages/MonBureau";
 import Members from "./pages/Members";
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/division" element={<ProtectedRoute requiredRole="chef_service"><ChefDivisionDashboard /></ProtectedRoute>} />
             <Route path="/president" element={<ProtectedRoute requiredRole="president"><PresidentDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUsers /></ProtectedRoute>} />
             
             {/* Admin-only management */}
             <Route path="/equipes" element={<ProtectedRoute requiredRole="admin"><TeamManagement /></ProtectedRoute>} />
