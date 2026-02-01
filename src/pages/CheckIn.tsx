@@ -19,6 +19,49 @@ import { MemberQRCode } from "@/components/qrcode/MemberQRCode";
 import { QRScanner } from "@/components/qrcode/QRScanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// Get current time in Kinshasa timezone (Africa/Kinshasa = UTC+1)
+function getKinshasaTime(): { hours: number; minutes: number } {
+  const now = new Date();
+  const kinshasaOffset = 1 * 60; // +1 hour in minutes
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const kinshasaMinutes = utcMinutes + kinshasaOffset;
+  const adjustedMinutes = ((kinshasaMinutes % 1440) + 1440) % 1440;
+  
+  return {
+    hours: Math.floor(adjustedMinutes / 60),
+    minutes: adjustedMinutes % 60
+  };
+}
+
+// Check if check-in/check-out is allowed based on Kinshasa time
+function isActionAllowed(type: 'entree' | 'sortie'): { allowed: boolean; message: string } {
+  const { hours, minutes } = getKinshasaTime();
+  const currentTimeMinutes = hours * 60 + minutes;
+  const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  
+  if (type === 'entree') {
+    // Check-in allowed until 09:00
+    const cutoffMinutes = 9 * 60;
+    if (currentTimeMinutes > cutoffMinutes) {
+      return { 
+        allowed: false, 
+        message: `Le pointage d'entrée n'est plus disponible après 09h00 (heure actuelle à Kinshasa: ${formattedTime})` 
+      };
+    }
+  } else {
+    // Check-out allowed from 16:00
+    const startMinutes = 16 * 60;
+    if (currentTimeMinutes < startMinutes) {
+      return { 
+        allowed: false, 
+        message: `Le pointage de sortie n'est disponible qu'à partir de 16h00 (heure actuelle à Kinshasa: ${formattedTime})` 
+      };
+    }
+  }
+  
+  return { allowed: true, message: '' };
+}
+
 const CheckIn = () => {
   const { profile } = useAuth();
   const { data: todayPresence, isLoading: loadingPresence } = useTodayPresence();
@@ -28,11 +71,22 @@ const CheckIn = () => {
   const recordPresence = useRecordPresence();
   const [scannedMemberId, setScannedMemberId] = useState<string | null>(null);
   const { data: scannedProfile } = useProfile(scannedMemberId || '');
+  const [, forceUpdate] = useState(0);
+
+  // Update every minute to refresh time-based restrictions
+  useState(() => {
+    const interval = setInterval(() => forceUpdate(n => n + 1), 60000);
+    return () => clearInterval(interval);
+  });
 
   const isCheckedIn = todayPresence?.heure_entree && !todayPresence?.heure_sortie;
   const checkInTime = todayPresence?.heure_entree 
     ? new Date(todayPresence.heure_entree).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     : null;
+  
+  // Check time restrictions
+  const checkInRestriction = isActionAllowed('entree');
+  const checkOutRestriction = isActionAllowed('sortie');
 
   const handleCheckIn = async () => {
     try {
@@ -151,6 +205,22 @@ const CheckIn = () => {
                     )}
                   </div>
 
+                  {/* Time restriction messages */}
+                  {!isCheckedIn && !checkInRestriction.allowed && (
+                    <div className="mb-4 p-4 bg-warning/10 border border-warning/20 rounded-lg text-center">
+                      <p className="text-sm text-warning font-medium">
+                        {checkInRestriction.message}
+                      </p>
+                    </div>
+                  )}
+                  {isCheckedIn && !checkOutRestriction.allowed && (
+                    <div className="mb-4 p-4 bg-warning/10 border border-warning/20 rounded-lg text-center">
+                      <p className="text-sm text-warning font-medium">
+                        {checkOutRestriction.message}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     {!isCheckedIn ? (
                       <Button 
@@ -158,7 +228,7 @@ const CheckIn = () => {
                         variant="success" 
                         onClick={handleCheckIn} 
                         className="min-w-48"
-                        disabled={recordPresence.isPending}
+                        disabled={recordPresence.isPending || !checkInRestriction.allowed}
                       >
                         {recordPresence.isPending ? (
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -173,7 +243,7 @@ const CheckIn = () => {
                         variant="destructive" 
                         onClick={handleCheckOut} 
                         className="min-w-48"
-                        disabled={recordPresence.isPending}
+                        disabled={recordPresence.isPending || !checkOutRestriction.allowed}
                       >
                         {recordPresence.isPending ? (
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -183,6 +253,13 @@ const CheckIn = () => {
                         Pointer le départ
                       </Button>
                     )}
+                  </div>
+
+                  {/* Time schedule info */}
+                  <div className="mt-6 pt-4 border-t border-border/50 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Horaires de pointage (heure de Kinshasa) : Entrée jusqu'à 09h00 • Sortie à partir de 16h00
+                    </p>
                   </div>
                 </div>
               </TabsContent>
