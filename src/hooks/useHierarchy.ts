@@ -85,18 +85,13 @@ export const useAssignToTeam = () => {
     mutationFn: async (agentId: string) => {
       if (!profile?.id) throw new Error('Non authentifié');
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ 
-          manager_id: profile.id
-        })
-        .eq('id', agentId)
-        .select()
-        .maybeSingle();
+      // Use backend function to avoid granting broad UPDATE permissions on profiles
+      const { error } = await (supabase as any).rpc('enroll_agent', {
+        p_agent_id: agentId,
+      });
 
       if (error) throw error;
-      if (!data) throw new Error("Aucune ligne mise à jour (droits insuffisants ou agent introuvable)");
-      return data;
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-team-members'] });
@@ -112,18 +107,12 @@ export const useRemoveFromTeam = () => {
 
   return useMutation({
     mutationFn: async (agentId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ 
-          manager_id: null,
-          team_id: null
-        })
-        .eq('id', agentId)
-        .select()
-        .single();
+      const { error } = await (supabase as any).rpc('unenroll_agent', {
+        p_agent_id: agentId,
+      });
 
       if (error) throw error;
-      return data;
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-team-members'] });

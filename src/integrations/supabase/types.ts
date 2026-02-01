@@ -882,6 +882,7 @@ export type Database = {
         Args: { _auth_id: string; _target_user_id: string }
         Returns: boolean
       }
+      enroll_agent: { Args: { p_agent_id: string }; Returns: undefined }
       get_profile_id: { Args: { _auth_id: string }; Returns: string }
       get_user_grade_rank: { Args: { _user_id: string }; Returns: number }
       get_user_service: { Args: { _auth_id: string }; Returns: string }
@@ -913,6 +914,7 @@ export type Database = {
         Args: { p_grade_id: string; p_user_id: string }
         Returns: undefined
       }
+      unenroll_agent: { Args: { p_agent_id: string }; Returns: undefined }
       validate_admin_matricule: {
         Args: { p_matricule: string; p_profile_id: string }
         Returns: boolean
