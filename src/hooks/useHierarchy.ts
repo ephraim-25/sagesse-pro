@@ -92,9 +92,10 @@ export const useAssignToTeam = () => {
         })
         .eq('id', agentId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("Aucune ligne mise à jour (droits insuffisants ou agent introuvable)");
       return data;
     },
     onSuccess: () => {
