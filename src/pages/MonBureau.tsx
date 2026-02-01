@@ -64,7 +64,7 @@ import {
 } from "@/components/ui/dialog";
 
 const MonBureau = () => {
-  const { profile, isChefService } = useAuth();
+  const { profile, isChefService, isChefBureau, canManageTeam, grade, loading: authLoading } = useAuth();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("team");
   const [searchQuery, setSearchQuery] = useState("");
@@ -267,15 +267,31 @@ const MonBureau = () => {
     </Card>
   );
 
-  if (!isChefService) {
+  // Security check: Only Chef de Bureau, Chef de Division, or users with management permissions
+  const hasAccess = canManageTeam || isChefService || isChefBureau;
+  
+  if (authLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!hasAccess) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-96">
           <Card className="p-8 text-center max-w-md">
             <AlertCircle className="w-12 h-12 mx-auto mb-4 text-warning" />
             <h2 className="text-xl font-semibold mb-2">Accès Restreint</h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mb-4">
               Cette page est réservée aux Chefs de Bureau et Chefs de Division.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Votre grade actuel: <strong>{grade?.label || 'Non défini'}</strong>
             </p>
           </Card>
         </div>

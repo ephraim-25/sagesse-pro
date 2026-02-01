@@ -6,10 +6,11 @@ import { Loader2 } from 'lucide-react';
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: 'admin' | 'president' | 'chef_service' | 'agent';
+  requiredGrade?: string;
 }
 
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
-  const { user, loading, hasRole, isAdmin } = useAuth();
+const ProtectedRoute = ({ children, requiredRole, requiredGrade }: ProtectedRouteProps) => {
+  const { user, loading, hasRole, hasGrade, isAdmin, isChefService, profile } = useAuth();
 
   if (loading) {
     return (
@@ -26,7 +27,27 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && !isAdmin && !hasRole(requiredRole)) {
+  // Check account status - block suspended or pending accounts
+  if (profile?.account_status === 'suspended' || profile?.account_status === 'rejected') {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Admin bypasses all role/grade checks
+  if (isAdmin) {
+    return <>{children}</>;
+  }
+
+  // Check required role
+  if (requiredRole && !hasRole(requiredRole)) {
+    // Special case: chef_service role includes chef_bureau and chef_division grades
+    if (requiredRole === 'chef_service' && isChefService) {
+      return <>{children}</>;
+    }
+    return <Navigate to="/" replace />;
+  }
+
+  // Check required grade if specified
+  if (requiredGrade && !hasGrade(requiredGrade)) {
     return <Navigate to="/" replace />;
   }
 
