@@ -85,8 +85,8 @@ export function AppSidebar() {
   // Admin-specific items
   const adminItems = [
     { title: "Administration", url: "/admin", icon: Shield },
+    { title: "Gestion des Membres", url: "/admin/users", icon: Users },
     { title: "Gestion Équipes", url: "/equipes", icon: UserCog },
-    { title: "Tous les Membres", url: "/membres", icon: Users },
   ];
 
   // Admin-only security items
