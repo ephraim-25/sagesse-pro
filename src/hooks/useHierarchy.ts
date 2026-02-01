@@ -52,9 +52,13 @@ export const useMyTeamMembers = () => {
 
 // Get unassigned agents (no manager assigned)
 export const useUnassignedAgents = () => {
+  const { profile } = useAuth();
+
   return useQuery({
-    queryKey: ['unassigned-agents'],
+    queryKey: ['unassigned-agents', profile?.id],
     queryFn: async () => {
+      if (!profile?.id) return [];
+
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -64,6 +68,7 @@ export const useUnassignedAgents = () => {
         `)
         .is('manager_id', null)
         .eq('statut', 'actif')
+        .neq('id', profile.id) // Exclude self
         .order('nom');
 
       if (error) throw error;
@@ -73,6 +78,7 @@ export const useUnassignedAgents = () => {
         return rankOrder > 3; // Only agents below chef de division level
       });
     },
+    enabled: !!profile?.id,
   });
 };
 
