@@ -133,7 +133,7 @@ const Auth = () => {
 
     setLoading(true);
     
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -146,10 +146,16 @@ const Auth = () => {
       } else {
         toast.error(error.message);
       }
-    } else {
-      toast.success('Connexion réussie');
+      setLoading(false);
+      return;
     }
     
+    // Force session refresh to ensure latest roles/grades are loaded
+    if (data.session) {
+      await supabase.auth.refreshSession();
+    }
+    
+    toast.success('Connexion réussie');
     setLoading(false);
   };
 
