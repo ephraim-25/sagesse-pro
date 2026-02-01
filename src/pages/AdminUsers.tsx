@@ -96,14 +96,13 @@ const AdminUsers = () => {
   const updateGradeMutation = useMutation({
     mutationFn: async ({ userId, gradeId }: { userId: string; gradeId: string }) => {
       setUpdatingUserId(userId);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          grade_id: gradeId,
-          custom_grade: null // Clear custom grade when setting a standard grade
-        })
-        .eq('id', userId);
+
+      // IMPORTANT: keep roles in sync with grades to avoid privilege mismatches
+      // (e.g., Chef de Bureau grade but still 'agent' role).
+      const { error } = await (supabase as any).rpc('set_user_grade_and_role', {
+        p_user_id: userId,
+        p_grade_id: gradeId,
+      });
 
       if (error) throw error;
       return { success: true };

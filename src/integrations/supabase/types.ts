@@ -909,6 +909,10 @@ export type Database = {
         }
         Returns: string
       }
+      set_user_grade_and_role: {
+        Args: { p_grade_id: string; p_user_id: string }
+        Returns: undefined
+      }
       validate_admin_matricule: {
         Args: { p_matricule: string; p_profile_id: string }
         Returns: boolean
