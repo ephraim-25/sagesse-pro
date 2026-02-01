@@ -5,16 +5,15 @@ import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { DepartmentRadar } from "@/components/dashboard/DepartmentRadar";
 import { 
   Users, 
-  TrendingUp, 
   AlertTriangle, 
-  Building2,
   Target,
   FileText,
-  Download
+  Download,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDashboardData } from "@/hooks/useData";
-import { Loader2 } from "lucide-react";
+import logoCsn from "@/assets/logo-csn.png";
 
 const PresidentDashboard = () => {
   const { data: dashboardData, isLoading } = useDashboardData();
@@ -30,9 +29,11 @@ const PresidentDashboard = () => {
         <div className="page-header">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-lg">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
+              <img 
+                src={logoCsn} 
+                alt="Logo CSN" 
+                className="w-12 h-12 object-contain"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">SIGC-CSN</h1>
                 <p className="text-muted-foreground">Système Intégré de Gestion du Conseil</p>
