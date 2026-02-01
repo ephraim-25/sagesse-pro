@@ -4,6 +4,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  drawPieChart,
+  drawBarChart,
+  drawHorizontalBarChart,
+  drawLegend,
+  addChartToPdf,
+  objectToChartData,
+} from '@/lib/pdfCharts';
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
@@ -133,7 +141,7 @@ const addSignatureSection = (doc: jsPDF, startY: number) => {
 };
 
 export const usePdfExport = () => {
-  // Export Daily Presence Report
+  // Export Daily Presence Report with Charts
   const exportDailyPresenceReport = async (date?: string) => {
     const targetDate = date || new Date().toISOString().split('T')[0];
     
@@ -158,6 +166,33 @@ export const usePdfExport = () => {
       const doc = new jsPDF();
       let yPos = addHeader(doc, `RAPPORT JOURNALIER DE PRÉSENCES - ${format(new Date(targetDate), 'dd MMMM yyyy', { locale: fr })}`);
       
+      const presentielCount = presences?.filter(p => p.type === 'presentiel' && p.heure_entree).length || 0;
+      const teleworkCount = telework?.filter(t => t.check_in).length || 0;
+      const absentCount = Math.max(0, 20 - presentielCount - teleworkCount); // Assuming 20 staff
+      
+      // === PIE CHART: Attendance Distribution ===
+      const attendanceData = objectToChartData({
+        'Bureau': presentielCount,
+        'Télétravail': teleworkCount,
+        'Absent': absentCount
+      }, {
+        'Bureau': '#003366',
+        'Télétravail': '#4CAF50',
+        'Absent': '#F44336'
+      });
+      
+      const pieChart = drawPieChart(attendanceData, 150, 150);
+      const legend = drawLegend(attendanceData, 100);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RÉPARTITION DES PRÉSENCES', 20, yPos);
+      yPos += 5;
+      
+      addChartToPdf(doc, pieChart, 25, yPos, 50);
+      addChartToPdf(doc, legend, 80, yPos + 10, 40);
+      yPos += 60;
+      
       // Summary section
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -166,9 +201,6 @@ export const usePdfExport = () => {
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      
-      const presentielCount = presences?.filter(p => p.type === 'presentiel' && p.heure_entree).length || 0;
-      const teleworkCount = telework?.filter(t => t.check_in).length || 0;
       
       doc.text(`• Présences au bureau: ${presentielCount}`, 25, yPos);
       yPos += 6;
@@ -264,7 +296,7 @@ export const usePdfExport = () => {
     }
   };
   
-  // Export Tasks Report
+  // Export Tasks Report with Charts
   const exportTasksReport = async (filters?: { service?: string; status?: string }) => {
     try {
       toast.loading('Génération du rapport des tâches...');
@@ -284,6 +316,58 @@ export const usePdfExport = () => {
       const doc = new jsPDF();
       let yPos = addHeader(doc, 'RAPPORT DES TÂCHES ET MISSIONS');
       
+      const aFaire = tasks?.filter(t => t.statut === 'a_faire').length || 0;
+      const enCours = tasks?.filter(t => t.statut === 'en_cours').length || 0;
+      const enPause = tasks?.filter(t => t.statut === 'en_pause').length || 0;
+      const terminees = tasks?.filter(t => t.statut === 'termine').length || 0;
+      const enRetard = tasks?.filter(t => {
+        if (!t.date_limite) return false;
+        return new Date(t.date_limite) < new Date() && t.statut !== 'termine';
+      }).length || 0;
+      
+      // === CHARTS SECTION ===
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANALYSE VISUELLE', 20, yPos);
+      yPos += 5;
+      
+      // Pie chart for task status
+      const statusData = objectToChartData({
+        'À faire': aFaire,
+        'En cours': enCours,
+        'En pause': enPause,
+        'Terminées': terminees
+      }, {
+        'À faire': '#FF9800',
+        'En cours': '#2196F3',
+        'En pause': '#9C27B0',
+        'Terminées': '#4CAF50'
+      });
+      
+      const statusPie = drawPieChart(statusData, 140, 140);
+      const statusLegend = drawLegend(statusData, 100);
+      
+      addChartToPdf(doc, statusPie, 20, yPos, 45);
+      addChartToPdf(doc, statusLegend, 70, yPos + 5, 35);
+      
+      // Bar chart for priority distribution
+      const priorityData = objectToChartData({
+        'Faible': tasks?.filter(t => t.priorite === 'faible').length || 0,
+        'Moyen': tasks?.filter(t => t.priorite === 'moyen').length || 0,
+        'Élevé': tasks?.filter(t => t.priorite === 'eleve').length || 0,
+        'Urgent': tasks?.filter(t => t.priorite === 'urgente').length || 0
+      }, {
+        'Faible': '#4CAF50',
+        'Moyen': '#2196F3',
+        'Élevé': '#FF9800',
+        'Urgent': '#F44336'
+      });
+      
+      const priorityBar = drawBarChart(priorityData, 200, 120, 'Répartition par Priorité');
+      addChartToPdf(doc, priorityBar, 115, yPos, 75);
+      
+      yPos += 55;
+      
       // Summary
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -293,22 +377,16 @@ export const usePdfExport = () => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       
-      const aFaire = tasks?.filter(t => t.statut === 'a_faire').length || 0;
-      const enCours = tasks?.filter(t => t.statut === 'en_cours').length || 0;
-      const terminees = tasks?.filter(t => t.statut === 'termine').length || 0;
-      const enRetard = tasks?.filter(t => {
-        if (!t.date_limite) return false;
-        return new Date(t.date_limite) < new Date() && t.statut !== 'termine';
-      }).length || 0;
-      
       doc.text(`• À faire: ${aFaire}`, 25, yPos);
+      doc.text(`• En cours: ${enCours}`, 80, yPos);
       yPos += 6;
-      doc.text(`• En cours: ${enCours}`, 25, yPos);
+      doc.text(`• En pause: ${enPause}`, 25, yPos);
+      doc.text(`• Terminées: ${terminees}`, 80, yPos);
       yPos += 6;
-      doc.text(`• Terminées: ${terminees}`, 25, yPos);
-      yPos += 6;
+      doc.setTextColor(244, 67, 54);
       doc.text(`• En retard: ${enRetard}`, 25, yPos);
-      yPos += 15;
+      doc.setTextColor(0, 0, 0);
+      yPos += 12;
       
       // Tasks table
       doc.setFont('helvetica', 'bold');
@@ -375,7 +453,7 @@ export const usePdfExport = () => {
     }
   };
   
-  // Export Performance Report
+  // Export Performance Report with Charts
   const exportPerformanceReport = async () => {
     try {
       toast.loading('Génération du rapport de performance...');
@@ -415,6 +493,63 @@ export const usePdfExport = () => {
           }
         }
       });
+      
+      // === CHARTS SECTION ===
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANALYSE VISUELLE DE LA PERFORMANCE', 20, yPos);
+      yPos += 5;
+      
+      // Bar chart: Tasks per department
+      const deptTasksData = Object.entries(serviceStats)
+        .slice(0, 6) // Limit to 6 departments for readability
+        .map(([dept, stats]) => ({
+          label: dept,
+          value: stats.taches
+        }));
+      
+      if (deptTasksData.length > 0) {
+        const deptBar = drawBarChart(deptTasksData, 240, 130, 'Tâches par Département');
+        addChartToPdf(doc, deptBar, 20, yPos, 80);
+      }
+      
+      // Pie chart: Completion rate
+      const totalTasks = Object.values(serviceStats).reduce((sum, s) => sum + s.taches, 0);
+      const completedTasks = Object.values(serviceStats).reduce((sum, s) => sum + s.terminees, 0);
+      const pendingTasks = totalTasks - completedTasks;
+      
+      const completionData = objectToChartData({
+        'Terminées': completedTasks,
+        'En cours': pendingTasks
+      }, {
+        'Terminées': '#4CAF50',
+        'En cours': '#FF9800'
+      });
+      
+      const completionPie = drawPieChart(completionData, 120, 120);
+      const completionLegend = drawLegend(completionData, 90);
+      
+      addChartToPdf(doc, completionPie, 115, yPos, 40);
+      addChartToPdf(doc, completionLegend, 160, yPos + 10, 35);
+      
+      yPos += 55;
+      
+      // Horizontal bar: Top performers
+      const performanceRanking = Object.entries(serviceStats)
+        .map(([dept, stats]) => ({
+          label: dept,
+          value: stats.taches > 0 ? Math.round((stats.terminees / stats.taches) * 100) : 0
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+      
+      if (performanceRanking.length > 0) {
+        const rankingBar = drawHorizontalBarChart(performanceRanking, 280, 100, 'Classement par Taux de Réalisation (%)');
+        addChartToPdf(doc, rankingBar, 20, yPos, 100);
+        yPos += 45;
+      }
+      
+      yPos += 10;
       
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -461,7 +596,7 @@ export const usePdfExport = () => {
     }
   };
   
-  // Export Telework Report
+  // Export Telework Report with Charts
   const exportTeleworkReport = async (startDate?: string, endDate?: string) => {
     try {
       toast.loading('Génération du rapport de télétravail...');
@@ -481,6 +616,62 @@ export const usePdfExport = () => {
       const doc = new jsPDF();
       let yPos = addHeader(doc, `RAPPORT DE TÉLÉTRAVAIL - ${format(new Date(start), 'dd/MM/yyyy')} au ${format(new Date(end), 'dd/MM/yyyy')}`);
       
+      const totalSessions = telework?.length || 0;
+      const totalMinutes = telework?.reduce((acc, t) => acc + (t.duree_active_minutes || 0), 0) || 0;
+      const uniqueUsers = new Set(telework?.map(t => t.user_id)).size;
+      
+      // === CHARTS SECTION ===
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANALYSE VISUELLE', 20, yPos);
+      yPos += 5;
+      
+      // Status distribution pie chart
+      const statusCounts: Record<string, number> = {};
+      telework?.forEach(t => {
+        const status = t.statut || 'Non défini';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+      
+      const statusData = objectToChartData(statusCounts, {
+        'connecte': '#4CAF50',
+        'pause': '#FF9800',
+        'hors_ligne': '#9E9E9E',
+        'Non défini': '#E0E0E0'
+      });
+      
+      const statusPie = drawPieChart(statusData, 140, 140);
+      const statusLegend = drawLegend(statusData, 100);
+      
+      addChartToPdf(doc, statusPie, 20, yPos, 45);
+      addChartToPdf(doc, statusLegend, 70, yPos + 5, 35);
+      
+      // Top users by time
+      const userTimes: Record<string, { name: string; minutes: number }> = {};
+      telework?.forEach(t => {
+        const userId = t.user_id;
+        const userName = (t.profile as any)?.prenom + ' ' + (t.profile as any)?.nom || 'Inconnu';
+        if (!userTimes[userId]) {
+          userTimes[userId] = { name: userName, minutes: 0 };
+        }
+        userTimes[userId].minutes += t.duree_active_minutes || 0;
+      });
+      
+      const topUsers = Object.values(userTimes)
+        .sort((a, b) => b.minutes - a.minutes)
+        .slice(0, 5)
+        .map(u => ({
+          label: u.name.substring(0, 15),
+          value: Math.round(u.minutes / 60) // Convert to hours
+        }));
+      
+      if (topUsers.length > 0) {
+        const topUsersBar = drawHorizontalBarChart(topUsers, 200, 100, 'Top 5 Utilisateurs (heures)');
+        addChartToPdf(doc, topUsersBar, 110, yPos, 80);
+      }
+      
+      yPos += 55;
+      
       // Summary
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -489,10 +680,6 @@ export const usePdfExport = () => {
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      
-      const totalSessions = telework?.length || 0;
-      const totalMinutes = telework?.reduce((acc, t) => acc + (t.duree_active_minutes || 0), 0) || 0;
-      const uniqueUsers = new Set(telework?.map(t => t.user_id)).size;
       
       doc.text(`• Total sessions: ${totalSessions}`, 25, yPos);
       yPos += 6;
@@ -549,7 +736,7 @@ export const usePdfExport = () => {
     }
   };
   
-  // Export Member List
+  // Export Member List with Charts
   const exportMemberList = async () => {
     try {
       toast.loading('Génération de la liste des membres...');
@@ -564,6 +751,49 @@ export const usePdfExport = () => {
       const doc = new jsPDF();
       let yPos = addHeader(doc, 'ANNUAIRE DES MEMBRES DU CONSEIL');
       
+      const actifs = profiles?.filter(p => p.statut === 'actif').length || 0;
+      const suspendus = profiles?.filter(p => p.statut === 'suspendu').length || 0;
+      
+      // === CHARTS SECTION ===
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANALYSE DES EFFECTIFS', 20, yPos);
+      yPos += 5;
+      
+      // Status pie chart
+      const statusData = objectToChartData({
+        'Actifs': actifs,
+        'Suspendus': suspendus
+      }, {
+        'Actifs': '#4CAF50',
+        'Suspendus': '#F44336'
+      });
+      
+      const statusPie = drawPieChart(statusData, 120, 120);
+      const statusLegend = drawLegend(statusData, 80);
+      
+      addChartToPdf(doc, statusPie, 20, yPos, 40);
+      addChartToPdf(doc, statusLegend, 65, yPos + 10, 30);
+      
+      // Distribution by service
+      const serviceCounts: Record<string, number> = {};
+      profiles?.forEach(p => {
+        const service = p.service || 'Non attribué';
+        serviceCounts[service] = (serviceCounts[service] || 0) + 1;
+      });
+      
+      const serviceData = Object.entries(serviceCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([label, value]) => ({ label, value }));
+      
+      if (serviceData.length > 0) {
+        const serviceBar = drawBarChart(serviceData, 220, 120, 'Répartition par Service');
+        addChartToPdf(doc, serviceBar, 100, yPos, 85);
+      }
+      
+      yPos += 50;
+      
       // Stats
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -573,12 +803,11 @@ export const usePdfExport = () => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       
-      const actifs = profiles?.filter(p => p.statut === 'actif').length || 0;
-      const suspendus = profiles?.filter(p => p.statut === 'suspendu').length || 0;
-      
       doc.text(`• Membres actifs: ${actifs}`, 25, yPos);
       yPos += 6;
       doc.text(`• Membres suspendus: ${suspendus}`, 25, yPos);
+      yPos += 6;
+      doc.text(`• Total: ${profiles?.length || 0}`, 25, yPos);
       yPos += 15;
       
       // Members table
