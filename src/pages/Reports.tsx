@@ -8,70 +8,110 @@ import {
   Users,
   Clock,
   TrendingUp,
-  FileDown
+  FileDown,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const reportTypes = [
-  {
-    id: 1,
-    title: "Rapport de Présences",
-    description: "Statistiques complètes des présences et absences",
-    icon: Users,
-    color: "bg-success/10 text-success",
-    lastGenerated: "08 Déc 2024",
-  },
-  {
-    id: 2,
-    title: "Rapport de Performance",
-    description: "Analyse de la productivité par département",
-    icon: TrendingUp,
-    color: "bg-info/10 text-info",
-    lastGenerated: "07 Déc 2024",
-  },
-  {
-    id: 3,
-    title: "Rapport des Tâches",
-    description: "État d'avancement des projets et tâches",
-    icon: BarChart3,
-    color: "bg-warning/10 text-warning",
-    lastGenerated: "06 Déc 2024",
-  },
-  {
-    id: 4,
-    title: "Rapport de Télétravail",
-    description: "Analyse des sessions de travail à distance",
-    icon: Clock,
-    color: "bg-accent/10 text-accent",
-    lastGenerated: "05 Déc 2024",
-  },
-];
-
-const recentReports = [
-  { name: "Rapport Mensuel - Novembre 2024.pdf", date: "01 Déc 2024", size: "2.4 MB" },
-  { name: "Analyse Performance Q3.pdf", date: "15 Nov 2024", size: "3.1 MB" },
-  { name: "Bilan Présences Octobre.pdf", date: "02 Nov 2024", size: "1.8 MB" },
-  { name: "Rapport Annuel 2023.pdf", date: "15 Jan 2024", size: "8.5 MB" },
-];
+import { usePdfExport } from "@/hooks/usePdfExport";
+import { useState } from "react";
+import logoCsn from "@/assets/logo-csn.png";
 
 const Reports = () => {
+  const { 
+    exportDailyPresenceReport, 
+    exportTasksReport, 
+    exportPerformanceReport, 
+    exportTeleworkReport,
+    exportMemberList
+  } = usePdfExport();
+  
+  const [loadingReport, setLoadingReport] = useState<string | null>(null);
+
+  const handleExport = async (type: string, exportFn: () => Promise<void>) => {
+    setLoadingReport(type);
+    try {
+      await exportFn();
+    } finally {
+      setLoadingReport(null);
+    }
+  };
+
+  const reportTypes = [
+    {
+      id: "presence",
+      title: "Rapport de Présences",
+      description: "Statistiques complètes des présences et absences du jour",
+      icon: Users,
+      color: "bg-success/10 text-success",
+      lastGenerated: "Aujourd'hui",
+      onExport: () => handleExport("presence", exportDailyPresenceReport),
+    },
+    {
+      id: "performance",
+      title: "Rapport de Performance",
+      description: "Analyse de la productivité par département",
+      icon: TrendingUp,
+      color: "bg-info/10 text-info",
+      lastGenerated: "À générer",
+      onExport: () => handleExport("performance", exportPerformanceReport),
+    },
+    {
+      id: "tasks",
+      title: "Rapport des Tâches",
+      description: "État d'avancement des projets et tâches",
+      icon: BarChart3,
+      color: "bg-warning/10 text-warning",
+      lastGenerated: "À générer",
+      onExport: () => handleExport("tasks", exportTasksReport),
+    },
+    {
+      id: "telework",
+      title: "Rapport de Télétravail",
+      description: "Analyse des sessions de travail à distance (30 derniers jours)",
+      icon: Clock,
+      color: "bg-accent/10 text-accent",
+      lastGenerated: "À générer",
+      onExport: () => handleExport("telework", exportTeleworkReport),
+    },
+  ];
+
+  const recentReports = [
+    { name: "Rapport Mensuel - Janvier 2026.pdf", date: "01 Fév 2026", size: "2.4 MB" },
+    { name: "Analyse Performance Q4.pdf", date: "15 Jan 2026", size: "3.1 MB" },
+    { name: "Bilan Présences Décembre.pdf", date: "02 Jan 2026", size: "1.8 MB" },
+    { name: "Rapport Annuel 2025.pdf", date: "15 Jan 2026", size: "8.5 MB" },
+  ];
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="page-header mb-0">
-            <h1 className="page-title">Rapports</h1>
-            <p className="page-description">Générez et exportez les rapports du système</p>
+            <div className="flex items-center gap-3">
+              <img 
+                src={logoCsn} 
+                alt="Logo CSN" 
+                className="w-10 h-10 object-contain"
+              />
+              <div>
+                <h1 className="page-title">Rapports</h1>
+                <p className="page-description">Générez et exportez les rapports officiels du CSN</p>
+              </div>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline">
               <Calendar className="w-4 h-4 mr-2" />
               Planifier
             </Button>
-            <Button>
-              <FileText className="w-4 h-4 mr-2" />
-              Nouveau rapport
+            <Button onClick={() => handleExport("members", exportMemberList)}>
+              <Users className="w-4 h-4 mr-2" />
+              {loadingReport === "members" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Annuaire des Membres"
+              )}
             </Button>
           </div>
         </div>
@@ -96,12 +136,25 @@ const Reports = () => {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  disabled={loadingReport === report.id}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Télécharger
                 </Button>
-                <Button size="sm" className="flex-1">
-                  Générer
+                <Button 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={report.onExport}
+                  disabled={loadingReport === report.id}
+                >
+                  {loadingReport === report.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : null}
+                  Générer PDF
                 </Button>
               </div>
             </div>
