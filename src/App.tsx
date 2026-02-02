@@ -25,6 +25,9 @@ import PerformanceStats from "./pages/PerformanceStats";
 import Reports from "./pages/Reports";
 import Security from "./pages/Security";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +41,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Dashboard Router - redirects based on role */}
             <Route path="/" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
@@ -65,6 +70,7 @@ const App = () => (
             <Route path="/rapports" element={<ProtectedRoute requiredRole="chef_service"><Reports /></ProtectedRoute>} />
             <Route path="/securite" element={<ProtectedRoute requiredRole="admin"><Security /></ProtectedRoute>} />
             <Route path="/parametres" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/profil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
