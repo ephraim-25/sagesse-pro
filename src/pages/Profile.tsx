@@ -20,9 +20,20 @@ import {
   Save, 
   Loader2,
   Shield,
-  Calendar
+  Calendar,
+  MapPin,
+  GraduationCap,
+  Hash,
+  FileText
 } from 'lucide-react';
 import { z } from 'zod';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const profileSchema = z.object({
   nom: z.string().min(2, 'Nom requis (minimum 2 caractères)'),
@@ -31,7 +42,24 @@ const profileSchema = z.object({
   telephone: z.string().optional(),
   fonction: z.string().optional(),
   service: z.string().optional(),
+  lieu_naissance: z.string().optional(),
+  date_naissance: z.string().optional(),
+  matricule: z.string().optional(),
+  niveau_etude: z.string().optional(),
+  date_engagement: z.string().optional(),
+  date_notification: z.string().optional(),
+  date_octroi_matricule: z.string().optional(),
+  direction: z.string().optional(),
 });
+
+const NIVEAU_ETUDES = [
+  'Primaire',
+  'Secondaire',
+  'Graduat / Licence',
+  'Master / Maîtrise',
+  'Doctorat',
+  'Autre',
+];
 
 const Profile = () => {
   const { profile, grade, refreshUserData, user } = useAuth();
@@ -45,10 +73,19 @@ const Profile = () => {
     telephone: '',
     fonction: '',
     service: '',
+    lieu_naissance: '',
+    date_naissance: '',
+    matricule: '',
+    niveau_etude: '',
+    date_engagement: '',
+    date_notification: '',
+    date_octroi_matricule: '',
+    direction: '',
   });
 
   useEffect(() => {
     if (profile) {
+      const p = profile as any;
       setFormData({
         nom: profile.nom || '',
         prenom: profile.prenom || '',
@@ -56,6 +93,14 @@ const Profile = () => {
         telephone: profile.telephone || '',
         fonction: profile.fonction || '',
         service: profile.service || '',
+        lieu_naissance: p.lieu_naissance || '',
+        date_naissance: p.date_naissance || '',
+        matricule: p.matricule || '',
+        niveau_etude: p.niveau_etude || '',
+        date_engagement: p.date_engagement || '',
+        date_notification: p.date_notification || '',
+        date_octroi_matricule: p.date_octroi_matricule || '',
+        direction: p.direction || '',
       });
     }
   }, [profile]);
@@ -130,16 +175,24 @@ const Profile = () => {
 
     setLoading(true);
     try {
+      // Clean up empty date strings to null
+      const cleanedData: Record<string, any> = { ...formData };
+      ['date_naissance', 'date_engagement', 'date_notification', 'date_octroi_matricule'].forEach(key => {
+        if (cleanedData[key] === '') {
+          cleanedData[key] = null;
+        }
+      });
+      
+      // Convert empty strings to null for optional fields
+      Object.keys(cleanedData).forEach(key => {
+        if (cleanedData[key] === '') {
+          cleanedData[key] = null;
+        }
+      });
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          nom: formData.nom,
-          prenom: formData.prenom,
-          postnom: formData.postnom || null,
-          telephone: formData.telephone || null,
-          fonction: formData.fonction || null,
-          service: formData.service || null,
-        })
+        .update(cleanedData)
         .eq('id', profile.id);
 
       if (error) throw error;
@@ -185,11 +238,11 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-4xl mx-auto animate-fade-in">
+      <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
         {/* Header */}
         <div className="page-header">
           <h1 className="page-title">Mon Profil</h1>
-          <p className="page-description">Gérez vos informations personnelles</p>
+          <p className="page-description">Gérez vos informations personnelles et administratives</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -246,9 +299,21 @@ const Profile = () => {
                     <span>{profile.telephone}</span>
                   </div>
                 )}
-                {profile.service && (
+                {formData.matricule && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Hash className="w-4 h-4" />
+                    <span className="font-mono">{formData.matricule}</span>
+                  </div>
+                )}
+                {formData.direction && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building2 className="w-4 h-4" />
+                    <span>{formData.direction}</span>
+                  </div>
+                )}
+                {profile.service && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <FileText className="w-4 h-4" />
                     <span>{profile.service}</span>
                   </div>
                 )}
@@ -288,69 +353,196 @@ const Profile = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="prenom">Prénom *</Label>
-                    <Input
-                      id="prenom"
-                      value={formData.prenom}
-                      onChange={(e) => handleInputChange('prenom', e.target.value)}
-                      placeholder="Votre prénom"
-                    />
+                {/* Identité */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Identité
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="prenom">Prénom *</Label>
+                      <Input
+                        id="prenom"
+                        value={formData.prenom}
+                        onChange={(e) => handleInputChange('prenom', e.target.value)}
+                        placeholder="Votre prénom"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="postnom">Post-nom</Label>
+                      <Input
+                        id="postnom"
+                        value={formData.postnom}
+                        onChange={(e) => handleInputChange('postnom', e.target.value)}
+                        placeholder="Optionnel"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nom">Nom *</Label>
+                      <Input
+                        id="nom"
+                        value={formData.nom}
+                        onChange={(e) => handleInputChange('nom', e.target.value)}
+                        placeholder="Votre nom"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nom">Nom *</Label>
-                    <Input
-                      id="nom"
-                      value={formData.nom}
-                      onChange={(e) => handleInputChange('nom', e.target.value)}
-                      placeholder="Votre nom"
-                    />
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="postnom">Post-nom</Label>
-                  <Input
-                    id="postnom"
-                    value={formData.postnom}
-                    onChange={(e) => handleInputChange('postnom', e.target.value)}
-                    placeholder="Votre post-nom (optionnel)"
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="lieu_naissance" className="flex items-center gap-2">
+                        <MapPin className="w-3 h-3" />
+                        Lieu de naissance
+                      </Label>
+                      <Input
+                        id="lieu_naissance"
+                        value={formData.lieu_naissance}
+                        onChange={(e) => handleInputChange('lieu_naissance', e.target.value)}
+                        placeholder="Ex: Kinshasa"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_naissance" className="flex items-center gap-2">
+                        <Calendar className="w-3 h-3" />
+                        Date de naissance
+                      </Label>
+                      <Input
+                        id="date_naissance"
+                        type="date"
+                        value={formData.date_naissance}
+                        onChange={(e) => handleInputChange('date_naissance', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="matricule" className="flex items-center gap-2">
+                        <Hash className="w-3 h-3" />
+                        Matricule
+                      </Label>
+                      <Input
+                        id="matricule"
+                        value={formData.matricule}
+                        onChange={(e) => handleInputChange('matricule', e.target.value)}
+                        placeholder="Ex: CSN-2024-XXX"
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="niveau_etude" className="flex items-center gap-2">
+                        <GraduationCap className="w-3 h-3" />
+                        Niveau d'étude
+                      </Label>
+                      <Select
+                        value={formData.niveau_etude || ''}
+                        onValueChange={(value) => handleInputChange('niveau_etude', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner le niveau" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {NIVEAU_ETUDES.map((niveau) => (
+                            <SelectItem key={niveau} value={niveau}>
+                              {niveau}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
 
                 <Separator />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="telephone">Téléphone</Label>
-                    <Input
-                      id="telephone"
-                      type="tel"
-                      value={formData.telephone}
-                      onChange={(e) => handleInputChange('telephone', e.target.value)}
-                      placeholder="+243 XXX XXX XXX"
-                    />
+                {/* Contact & Affectation */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Contact & Affectation
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="telephone">Téléphone</Label>
+                      <Input
+                        id="telephone"
+                        type="tel"
+                        value={formData.telephone}
+                        onChange={(e) => handleInputChange('telephone', e.target.value)}
+                        placeholder="+243 XXX XXX XXX"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="direction">Direction</Label>
+                      <Input
+                        id="direction"
+                        value={formData.direction}
+                        onChange={(e) => handleInputChange('direction', e.target.value)}
+                        placeholder="Ex: Direction Technique"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="service">Service / Département</Label>
-                    <Input
-                      id="service"
-                      value={formData.service}
-                      onChange={(e) => handleInputChange('service', e.target.value)}
-                      placeholder="Ex: Direction Technique"
-                    />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="service">Service / Bureau</Label>
+                      <Input
+                        id="service"
+                        value={formData.service}
+                        onChange={(e) => handleInputChange('service', e.target.value)}
+                        placeholder="Ex: Bureau Informatique"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fonction">Fonction</Label>
+                      <Input
+                        id="fonction"
+                        value={formData.fonction}
+                        onChange={(e) => handleInputChange('fonction', e.target.value)}
+                        placeholder="Ex: Analyste de données"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="fonction">Fonction</Label>
-                  <Input
-                    id="fonction"
-                    value={formData.fonction}
-                    onChange={(e) => handleInputChange('fonction', e.target.value)}
-                    placeholder="Ex: Analyste de données"
-                  />
+                <Separator />
+
+                {/* Données administratives */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Données Administratives
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="date_engagement">Date d'engagement</Label>
+                      <Input
+                        id="date_engagement"
+                        type="date"
+                        value={formData.date_engagement}
+                        onChange={(e) => handleInputChange('date_engagement', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_notification">Date de notification</Label>
+                      <Input
+                        id="date_notification"
+                        type="date"
+                        value={formData.date_notification}
+                        onChange={(e) => handleInputChange('date_notification', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="date_octroi_matricule">Date d'octroi matricule</Label>
+                      <Input
+                        id="date_octroi_matricule"
+                        type="date"
+                        value={formData.date_octroi_matricule}
+                        onChange={(e) => handleInputChange('date_octroi_matricule', e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end pt-4">
