@@ -16,8 +16,21 @@ import {
   RefreshCw,
   UserCog,
   CheckCircle2,
-  Shield
+  Shield,
+  Pencil,
+  Trash2,
+  MoreHorizontal
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { UserEditDialog } from '@/components/admin/UserEditDialog';
+import { UserDeleteDialog } from '@/components/admin/UserDeleteDialog';
 import logoCsn from '@/assets/logo-csn.png';
 
 interface UserProfile {
@@ -26,6 +39,18 @@ interface UserProfile {
   prenom: string;
   postnom: string | null;
   email: string;
+  telephone: string | null;
+  fonction: string | null;
+  service: string | null;
+  direction: string | null;
+  lieu_naissance: string | null;
+  date_naissance: string | null;
+  matricule: string | null;
+  niveau_etude: string | null;
+  date_engagement: string | null;
+  date_notification: string | null;
+  date_octroi_matricule: string | null;
+  secondary_bureau: string | null;
   grade_id: string | null;
   custom_grade: string | null;
   account_status: string;
@@ -48,8 +73,13 @@ const AdminUsers = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteUserName, setDeleteUserName] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Fetch all users with their grades
+  // Fetch all users with their grades and new fields
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['admin-all-users'],
     queryFn: async () => {
@@ -61,6 +91,18 @@ const AdminUsers = () => {
           prenom,
           postnom,
           email,
+          telephone,
+          fonction,
+          service,
+          direction,
+          lieu_naissance,
+          date_naissance,
+          matricule,
+          niveau_etude,
+          date_engagement,
+          date_notification,
+          date_octroi_matricule,
+          secondary_bureau,
           grade_id,
           custom_grade,
           account_status,
@@ -97,8 +139,6 @@ const AdminUsers = () => {
     mutationFn: async ({ userId, gradeId }: { userId: string; gradeId: string }) => {
       setUpdatingUserId(userId);
 
-      // IMPORTANT: keep roles in sync with grades to avoid privilege mismatches
-      // (e.g., Chef de Bureau grade but still 'agent' role).
       const { error } = await (supabase as any).rpc('set_user_grade_and_role', {
         p_user_id: userId,
         p_grade_id: gradeId,
@@ -130,12 +170,25 @@ const AdminUsers = () => {
       user.nom?.toLowerCase().includes(searchLower) ||
       user.prenom?.toLowerCase().includes(searchLower) ||
       user.email?.toLowerCase().includes(searchLower) ||
-      user.grades?.label?.toLowerCase().includes(searchLower)
+      user.grades?.label?.toLowerCase().includes(searchLower) ||
+      user.matricule?.toLowerCase().includes(searchLower) ||
+      user.service?.toLowerCase().includes(searchLower)
     );
   });
 
   const handleGradeChange = (userId: string, gradeId: string) => {
     updateGradeMutation.mutate({ userId, gradeId });
+  };
+
+  const handleEditClick = (user: UserProfile) => {
+    setEditingUser(user);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (user: UserProfile) => {
+    setDeleteUserId(user.id);
+    setDeleteUserName(`${user.prenom} ${user.nom}`);
+    setDeleteDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -167,7 +220,7 @@ const AdminUsers = () => {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Gestion des Membres</h1>
               <p className="text-muted-foreground">
-                Gérez les grades et statuts des utilisateurs de la plateforme
+                Gérez les grades, profils et statuts des utilisateurs
               </p>
             </div>
           </div>
@@ -232,13 +285,13 @@ const AdminUsers = () => {
                   Liste des Utilisateurs
                 </CardTitle>
                 <CardDescription>
-                  Cliquez sur le menu déroulant pour modifier le grade d'un utilisateur
+                  Modifiez le grade ou éditez le profil complet d'un utilisateur
                 </CardDescription>
               </div>
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher..."
+                  placeholder="Rechercher par nom, email, matricule..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
@@ -257,10 +310,11 @@ const AdminUsers = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Utilisateur</TableHead>
-                      <TableHead>Email</TableHead>
+                      <TableHead>Matricule</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Grade Actuel</TableHead>
                       <TableHead>Modifier le Grade</TableHead>
+                      <TableHead className="w-[80px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -278,13 +332,13 @@ const AdminUsers = () => {
                                 {user.prenom} {user.postnom || ''} {user.nom}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                Inscrit le {new Date(user.created_at).toLocaleDateString('fr-FR')}
+                                {user.email}
                               </p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {user.email}
+                        <TableCell className="text-muted-foreground font-mono text-sm">
+                          {user.matricule || '-'}
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(user.account_status)}
@@ -300,7 +354,7 @@ const AdminUsers = () => {
                             onValueChange={(value) => handleGradeChange(user.id, value)}
                             disabled={updatingUserId === user.id}
                           >
-                            <SelectTrigger className="w-48">
+                            <SelectTrigger className="w-40">
                               {updatingUserId === user.id ? (
                                 <div className="flex items-center gap-2">
                                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -319,6 +373,30 @@ const AdminUsers = () => {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleEditClick(user)}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Modifier le profil
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteClick(user)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -335,6 +413,21 @@ const AdminUsers = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Dialog */}
+        <UserEditDialog
+          user={editingUser}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+
+        {/* Delete Dialog */}
+        <UserDeleteDialog
+          userId={deleteUserId}
+          userName={deleteUserName}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+        />
       </div>
     </AppLayout>
   );

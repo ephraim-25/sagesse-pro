@@ -36,13 +36,13 @@ function validateTimeRestrictions(type: 'entree' | 'sortie'): { allowed: boolean
   const currentTimeMinutes = hours * 60 + minutes;
   
   if (type === 'entree') {
-    // Check-in allowed until 09:00 (9 * 60 = 540 minutes)
-    const cutoffMinutes = 9 * 60;
+    // Check-in allowed until 10:00 (10 * 60 = 600 minutes)
+    const cutoffMinutes = 10 * 60;
     if (currentTimeMinutes > cutoffMinutes) {
       const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       return { 
         allowed: false, 
-        message: `Le pointage d'entrée n'est plus disponible après 09h00 (heure actuelle: ${formattedTime})` 
+        message: `Le pointage d'entrée n'est plus disponible après 10h00 (heure actuelle: ${formattedTime})` 
       };
     }
   } else if (type === 'sortie') {

@@ -874,6 +874,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_delete_user: { Args: { p_user_id: string }; Returns: undefined }
+      admin_update_profile: {
+        Args: { p_updates: Json; p_user_id: string }
+        Returns: undefined
+      }
       can_assign_task_to: {
         Args: { _auth_id: string; _target_user_id: string }
         Returns: boolean
