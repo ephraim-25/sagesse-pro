@@ -15,14 +15,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function AppHeader() {
-  const { profile, signOut, isAdmin, isPresident, hasRole } = useAuth();
+  const { profile, grade, signOut, isAdmin, isPresident, hasRole } = useAuth();
   const navigate = useNavigate();
 
-  // Determine user's display role - more specific labels
+  // Determine user's display role - use grade label when available
   const getUserRoleLabel = () => {
     if (isAdmin) return "Administrateur";
+    if (grade?.label) return grade.label;
     if (hasRole('president')) return "Président";
-    if (hasRole('chef_service')) return "Chef de Bureau";
     return "Agent";
   };
 

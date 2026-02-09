@@ -34,13 +34,13 @@ import { Badge } from "@/components/ui/badge";
 import logoCsn from "@/assets/logo-csn.png";
 
 export function AppSidebar() {
-  const { isAdmin, isPresident, isChefService, hasRole, profile } = useAuth();
+  const { isAdmin, isPresident, isChefService, hasRole, profile, grade } = useAuth();
   
-  // Determine user's primary role for display
+  // Determine user's primary role for display - use grade label when available
   const getUserRoleLabel = () => {
     if (isAdmin) return { label: "Administrateur", variant: "destructive" as const };
+    if (grade?.label) return { label: grade.label, variant: hasRole('president') ? "default" as const : hasRole('chef_service') ? "secondary" as const : "outline" as const };
     if (hasRole('president')) return { label: "Président", variant: "default" as const };
-    if (hasRole('chef_service')) return { label: "Chef de Bureau", variant: "secondary" as const };
     return { label: "Agent", variant: "outline" as const };
   };
 
