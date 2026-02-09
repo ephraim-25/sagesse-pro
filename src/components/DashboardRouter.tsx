@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
  * Component that routes users to the appropriate dashboard based on their role and grade.
  * Hierarchy:
  * - President/Admin → Strategic dashboard (/president)
+ * - Directeur → Direction dashboard (/directeur)
  * - Chef de Division → Supervision dashboard (/division)
  * - Chef de Bureau → Management dashboard (/mon-bureau)
  * - Agent → Simplified dashboard (/agent)
@@ -27,6 +28,11 @@ const DashboardRouter = () => {
   // President or Admin → Strategic dashboard
   if (isPresident || isAdmin) {
     return <Navigate to="/president" replace />;
+  }
+
+  // Directeur → Direction-specific dashboard
+  if (grade?.code === 'directeur') {
+    return <Navigate to="/directeur" replace />;
   }
 
   // Chef de Division → Supervision dashboard

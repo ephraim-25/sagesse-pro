@@ -9,6 +9,7 @@ import DashboardRouter from "@/components/DashboardRouter";
 import Auth from "./pages/Auth";
 import AgentDashboard from "./pages/AgentDashboard";
 import ChefDivisionDashboard from "./pages/ChefDivisionDashboard";
+import DirecteurDashboard from "./pages/DirecteurDashboard";
 import PresidentDashboard from "./pages/PresidentDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsers from "./pages/AdminUsers";
@@ -50,6 +51,7 @@ const App = () => (
             {/* Role-specific dashboards */}
             <Route path="/agent" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
             <Route path="/mon-bureau" element={<ProtectedRoute requiredRole="chef_service"><MonBureau /></ProtectedRoute>} />
+            <Route path="/directeur" element={<ProtectedRoute requiredRole="chef_service"><DirecteurDashboard /></ProtectedRoute>} />
             <Route path="/division" element={<ProtectedRoute requiredRole="chef_service"><ChefDivisionDashboard /></ProtectedRoute>} />
             <Route path="/president" element={<ProtectedRoute requiredRole="president"><PresidentDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />

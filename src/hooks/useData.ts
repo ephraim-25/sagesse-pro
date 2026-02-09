@@ -113,6 +113,7 @@ export interface Tache {
   date_debut: string | null;
   date_fin: string | null;
   progression: number;
+  documents_lies: string[] | null;
   created_at: string;
   assigned_profile?: Profile;
   creator_profile?: Profile;
@@ -148,6 +149,7 @@ export const useCreateTache = () => {
       priorite?: 'faible' | 'moyen' | 'eleve' | 'urgente';
       assigned_to?: string | null;
       date_limite?: string | null;
+      documents_lies?: string[] | null;
     }) => {
       const { data, error } = await supabase
         .from('taches')
@@ -157,6 +159,7 @@ export const useCreateTache = () => {
           priorite: tache.priorite || 'moyen',
           assigned_to: tache.assigned_to,
           date_limite: tache.date_limite,
+          documents_lies: tache.documents_lies,
           created_by: profile?.id,
         })
         .select()

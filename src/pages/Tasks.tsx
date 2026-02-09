@@ -15,7 +15,8 @@ import {
   Calendar,
   User,
   MoreHorizontal,
-  Loader2
+  Loader2,
+  Paperclip
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -43,6 +44,8 @@ import { useTaches, useCreateTache, useUpdateTache, useProfiles, type Tache } fr
 import { useAssignableMembers } from "@/hooks/useHierarchy";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { TaskFileUpload } from "@/components/tasks/TaskFileUpload";
+import { TaskDocuments } from "@/components/tasks/TaskDocuments";
 
 const priorityConfig = {
   faible: { color: "text-muted-foreground", bg: "bg-muted", label: "Basse" },
@@ -59,7 +62,9 @@ const statusConfig = {
 };
 
 const Tasks = () => {
-  const { isChefService } = useAuth();
+  const { isChefService, isAdmin, isPresident } = useAuth();
+  const canCreateTasks = isChefService || isAdmin || isPresident;
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -69,6 +74,7 @@ const Tasks = () => {
     priorite: 'moyen' as const,
     assigned_to: '',
     date_limite: '',
+    documents_lies: [] as string[],
   });
 
   const { data: tasks, isLoading } = useTaches();
@@ -119,10 +125,11 @@ const Tasks = () => {
         priorite: newTask.priorite,
         assigned_to: newTask.assigned_to || null,
         date_limite: newTask.date_limite || null,
+        documents_lies: newTask.documents_lies.length > 0 ? newTask.documents_lies : null,
       });
       toast.success('Tâche créée avec succès');
       setShowCreateDialog(false);
-      setNewTask({ titre: '', description: '', priorite: 'moyen', assigned_to: '', date_limite: '' });
+      setNewTask({ titre: '', description: '', priorite: 'moyen', assigned_to: '', date_limite: '', documents_lies: [] });
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la création');
     }
@@ -150,7 +157,7 @@ const Tasks = () => {
             <h1 className="page-title">Gestion des Tâches</h1>
             <p className="page-description">Créez et suivez les tâches du Conseil</p>
           </div>
-          {isChefService && (
+          {canCreateTasks && (
             <Button className="w-fit" onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Nouvelle tâche
@@ -282,6 +289,13 @@ const Tasks = () => {
                               {status.label}
                             </span>
                           </div>
+                          
+                          {/* Task Documents */}
+                          {task.documents_lies && task.documents_lies.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <TaskDocuments documents={task.documents_lies} />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -375,6 +389,18 @@ const Tasks = () => {
                     Vous n'avez aucun agent dans votre bureau. Affectez des agents depuis "Mon Bureau".
                   </p>
                 )}
+              </div>
+              
+              {/* File Upload Section */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" />
+                  Documents joints
+                </Label>
+                <TaskFileUpload
+                  onFilesUploaded={(urls) => setNewTask(prev => ({ ...prev, documents_lies: urls }))}
+                  existingFiles={newTask.documents_lies}
+                />
               </div>
             </div>
             <DialogFooter>
