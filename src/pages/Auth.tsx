@@ -43,6 +43,7 @@ const adminSignupSchema = z.object({
 const GRADES = [
   { code: 'president_conseil', label: 'Président du conseil', requiresApproval: true },
   { code: 'secretaire_permanent', label: 'Secrétaire Permanent', requiresApproval: true },
+  { code: 'directeur', label: 'Directeur', requiresApproval: true },
   { code: 'chef_division', label: 'Chef de division', requiresApproval: false },
   { code: 'chef_bureau', label: 'Chef de Bureau', requiresApproval: false },
   { code: 'ata_1', label: 'ATA 1 (Attaché 1ère classe)', requiresApproval: false },
