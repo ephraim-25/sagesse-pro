@@ -434,17 +434,26 @@ export type Database = {
           auth_id: string
           created_at: string | null
           custom_grade: string | null
+          date_engagement: string | null
+          date_naissance: string | null
+          date_notification: string | null
+          date_octroi_matricule: string | null
+          direction: string | null
           email: string
           fonction: string | null
           grade_id: string | null
           id: string
           last_activity_at: string | null
           last_status: Database["public"]["Enums"]["telework_status"] | null
+          lieu_naissance: string | null
           manager_id: string | null
+          matricule: string | null
+          niveau_etude: string | null
           nom: string
           photo_url: string | null
           postnom: string | null
           prenom: string
+          secondary_bureau: string | null
           service: string | null
           statut: Database["public"]["Enums"]["statut_utilisateur"] | null
           team_id: string | null
@@ -456,17 +465,26 @@ export type Database = {
           auth_id: string
           created_at?: string | null
           custom_grade?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          date_notification?: string | null
+          date_octroi_matricule?: string | null
+          direction?: string | null
           email: string
           fonction?: string | null
           grade_id?: string | null
           id?: string
           last_activity_at?: string | null
           last_status?: Database["public"]["Enums"]["telework_status"] | null
+          lieu_naissance?: string | null
           manager_id?: string | null
+          matricule?: string | null
+          niveau_etude?: string | null
           nom: string
           photo_url?: string | null
           postnom?: string | null
           prenom: string
+          secondary_bureau?: string | null
           service?: string | null
           statut?: Database["public"]["Enums"]["statut_utilisateur"] | null
           team_id?: string | null
@@ -478,17 +496,26 @@ export type Database = {
           auth_id?: string
           created_at?: string | null
           custom_grade?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          date_notification?: string | null
+          date_octroi_matricule?: string | null
+          direction?: string | null
           email?: string
           fonction?: string | null
           grade_id?: string | null
           id?: string
           last_activity_at?: string | null
           last_status?: Database["public"]["Enums"]["telework_status"] | null
+          lieu_naissance?: string | null
           manager_id?: string | null
+          matricule?: string | null
+          niveau_etude?: string | null
           nom?: string
           photo_url?: string | null
           postnom?: string | null
           prenom?: string
+          secondary_bureau?: string | null
           service?: string | null
           statut?: Database["public"]["Enums"]["statut_utilisateur"] | null
           team_id?: string | null
@@ -940,6 +967,7 @@ export type Database = {
       grade_hierarchique:
         | "president_conseil"
         | "secretaire_permanent"
+        | "directeur"
         | "chef_division"
         | "chef_bureau"
         | "ata_1"
@@ -1097,6 +1125,7 @@ export const Constants = {
       grade_hierarchique: [
         "president_conseil",
         "secretaire_permanent",
+        "directeur",
         "chef_division",
         "chef_bureau",
         "ata_1",
