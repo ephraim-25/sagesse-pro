@@ -32,6 +32,7 @@ import {
   Download
 } from "lucide-react";
 import logoCsn from "@/assets/logo-csn.png";
+import { TaskFileUpload } from "@/components/tasks/TaskFileUpload";
 import { 
   useMyTeamMembers, 
   useUnassignedAgents, 
@@ -76,7 +77,8 @@ const MonBureau = () => {
     description: '',
     priorite: 'moyen' as 'faible' | 'moyen' | 'eleve' | 'urgente',
     assigned_to: '',
-    date_limite: ''
+    date_limite: '',
+    documents_lies: [] as string[]
   });
 
   // Handle URL query params for tabs
@@ -177,7 +179,8 @@ const MonBureau = () => {
         description: newTask.description || null,
         priorite: newTask.priorite,
         assigned_to: newTask.assigned_to,
-        date_limite: newTask.date_limite || null
+        date_limite: newTask.date_limite || null,
+        documents_lies: newTask.documents_lies.length > 0 ? newTask.documents_lies : null
       });
       toast.success('Tâche créée avec succès');
       setShowTaskDialog(false);
@@ -186,7 +189,8 @@ const MonBureau = () => {
         description: '',
         priorite: 'moyen',
         assigned_to: '',
-        date_limite: ''
+        date_limite: '',
+        documents_lies: []
       });
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la création');
@@ -627,6 +631,17 @@ const MonBureau = () => {
                           type="date"
                           value={newTask.date_limite}
                           onChange={(e) => setNewTask({ ...newTask, date_limite: e.target.value })}
+                        />
+                      </div>
+                      
+                      {/* File Upload Section */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          Documents joints
+                        </Label>
+                        <TaskFileUpload
+                          onFilesUploaded={(urls) => setNewTask({ ...newTask, documents_lies: urls })}
+                          existingFiles={newTask.documents_lies}
                         />
                       </div>
                     </div>
