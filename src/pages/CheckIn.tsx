@@ -40,12 +40,12 @@ function isActionAllowed(type: 'entree' | 'sortie'): { allowed: boolean; message
   const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   
   if (type === 'entree') {
-    // Check-in allowed until 09:00
-    const cutoffMinutes = 9 * 60;
+    // Check-in allowed until 10:00
+    const cutoffMinutes = 10 * 60;
     if (currentTimeMinutes > cutoffMinutes) {
       return { 
         allowed: false, 
-        message: `Le pointage d'entrée n'est plus disponible après 09h00 (heure actuelle à Kinshasa: ${formattedTime})` 
+        message: `Le pointage d'entrée n'est plus disponible après 10h00 (heure actuelle à Kinshasa: ${formattedTime})` 
       };
     }
   } else {
@@ -258,7 +258,7 @@ const CheckIn = () => {
                   {/* Time schedule info */}
                   <div className="mt-6 pt-4 border-t border-border/50 text-center">
                     <p className="text-xs text-muted-foreground">
-                      Horaires de pointage (heure de Kinshasa) : Entrée jusqu'à 09h00 • Sortie à partir de 16h00
+                      Horaires de pointage (heure de Kinshasa) : Entrée jusqu'à 10h00 • Sortie à partir de 16h00
                     </p>
                   </div>
                 </div>
