@@ -128,8 +128,8 @@ const Profile = () => {
     setUploadingPhoto(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user?.id}/${fileName}`;
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
