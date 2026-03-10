@@ -28,6 +28,7 @@ const typeIcons: Record<string, string> = {
 export function NotificationCenter() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { permission, isSupported, requestPermission } = usePushNotifications();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const handleEnablePush = async () => {
