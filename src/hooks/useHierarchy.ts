@@ -72,10 +72,24 @@ export const useUnassignedAgents = () => {
         .order('nom');
 
       if (error) throw error;
-      // Filter out high-level users (president, secretaire, etc.)
+      
+      // Get current user's grade rank
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('grade:grades(rank_order)')
+        .eq('id', profile.id)
+        .single();
+      
+      const myRank = (myProfile?.grade as any)?.rank_order ?? 999;
+      
       return (data as TeamMember[]).filter(p => {
         const rankOrder = (p.grade as any)?.rank_order ?? 999;
-        return rankOrder > 3; // Only agents below chef de division level
+        // Directors (rank 3) can only see Chef de Division (4) and Chef de Bureau (5)
+        if (myRank === 3) {
+          return rankOrder === 4 || rankOrder === 5;
+        }
+        // Others: filter out high-level users
+        return rankOrder > 3;
       });
     },
     enabled: !!profile?.id,
