@@ -1,4 +1,5 @@
-import { Bell, Search, User, LogOut, Settings, UserCircle } from "lucide-react";
+import { Search, User, LogOut, Settings, UserCircle } from "lucide-react";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
