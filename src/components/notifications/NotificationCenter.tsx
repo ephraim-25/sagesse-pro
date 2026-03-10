@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck, BellOff, BellRing, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Check, CheckCheck, BellOff, BellRing, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +28,7 @@ const typeIcons: Record<string, string> = {
 export function NotificationCenter() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { permission, isSupported, requestPermission } = usePushNotifications();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const handleEnablePush = async () => {
@@ -148,6 +150,21 @@ export function NotificationCenter() {
             </div>
           )}
         </ScrollArea>
+
+        {/* Footer */}
+        {notifications.length > 0 && (
+          <div className="border-t border-border px-4 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+              onClick={() => { setOpen(false); navigate("/notifications"); }}
+            >
+              Voir tout l'historique
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
