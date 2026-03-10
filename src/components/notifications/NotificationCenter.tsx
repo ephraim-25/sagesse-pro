@@ -150,6 +150,21 @@ export function NotificationCenter() {
             </div>
           )}
         </ScrollArea>
+
+        {/* Footer */}
+        {notifications.length > 0 && (
+          <div className="border-t border-border px-4 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+              onClick={() => { setOpen(false); navigate("/notifications"); }}
+            >
+              Voir tout l'historique
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
