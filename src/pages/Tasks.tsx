@@ -217,7 +217,9 @@ const Tasks = () => {
                   return (
                     <div 
                       key={task.id}
-                      className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-all duration-300"
+                      className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-all duration-300 cursor-pointer"
+                      onClick={() => setSelectedTask(task)}
+                    >
                     >
                       <div className="flex items-start gap-4">
                         <div className={cn(
