@@ -294,6 +294,14 @@ const Tasks = () => {
                             )}>
                               {status.label}
                             </span>
+                            {/* Unread messages indicator */}
+                            {unreadCounts[task.id] > 0 && (
+                              <span className="relative flex items-center gap-1 text-xs text-destructive font-medium">
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                {unreadCounts[task.id]}
+                                <span className="absolute -top-0.5 -left-0.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                              </span>
+                            )}
                           </div>
                           
                           {/* Task Documents */}
