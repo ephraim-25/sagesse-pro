@@ -691,6 +691,51 @@ export type Database = {
           },
         ]
       }
+      task_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read: boolean
+          read_at: string | null
+          sender_id: string
+          task_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          read_at?: string | null
+          sender_id: string
+          task_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          read_at?: string | null
+          sender_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_messages_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "taches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           created_at: string | null
@@ -972,6 +1017,10 @@ export type Database = {
       }
       is_same_service: {
         Args: { _auth_id: string; _target_user_id: string }
+        Returns: boolean
+      }
+      is_task_participant: {
+        Args: { _auth_id: string; _task_id: string }
         Returns: boolean
       }
       log_audit_action: {

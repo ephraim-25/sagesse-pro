@@ -16,7 +16,8 @@ import {
   User,
   MoreHorizontal,
   Loader2,
-  Paperclip
+  Paperclip,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -46,6 +47,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { TaskFileUpload } from "@/components/tasks/TaskFileUpload";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
+import { TaskDetailDialog } from "@/components/tasks/TaskDetailDialog";
+import { useUnreadTaskMessages } from "@/hooks/useTaskMessages";
 
 const priorityConfig = {
   faible: { color: "text-muted-foreground", bg: "bg-muted", label: "Basse" },
@@ -68,6 +71,7 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
   const [newTask, setNewTask] = useState({
     titre: '',
     description: '',
@@ -82,6 +86,7 @@ const Tasks = () => {
   const { data: assignableMembers } = useAssignableMembers();
   const createTask = useCreateTache();
   const updateTask = useUpdateTache();
+  const unreadCounts = useUnreadTaskMessages();
 
   // Check for overdue tasks
   const isOverdue = (task: Tache) => {
@@ -212,7 +217,8 @@ const Tasks = () => {
                   return (
                     <div 
                       key={task.id}
-                      className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-all duration-300"
+                      className="bg-card rounded-xl p-5 shadow-soft border border-border/50 hover:shadow-card transition-all duration-300 cursor-pointer"
+                      onClick={() => setSelectedTask(task)}
                     >
                       <div className="flex items-start gap-4">
                         <div className={cn(
@@ -244,8 +250,8 @@ const Tasks = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Voir les détails</DropdownMenuItem>
-                                <DropdownMenuItem>Modifier</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}>Voir les détails</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Modifier</DropdownMenuItem>
                                 {task.statut !== 'termine' && (
                                   <DropdownMenuItem onClick={() => handleStatusChange(task.id, 'termine')}>
                                     Marquer comme terminée
@@ -288,6 +294,14 @@ const Tasks = () => {
                             )}>
                               {status.label}
                             </span>
+                            {/* Unread messages indicator */}
+                            {unreadCounts[task.id] > 0 && (
+                              <span className="relative flex items-center gap-1 text-xs text-destructive font-medium">
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                {unreadCounts[task.id]}
+                                <span className="absolute -top-0.5 -left-0.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                              </span>
+                            )}
                           </div>
                           
                           {/* Task Documents */}
@@ -416,6 +430,14 @@ const Tasks = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Task Detail Dialog with Chat */}
+        <TaskDetailDialog
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+          unreadCount={selectedTask ? (unreadCounts[selectedTask.id] || 0) : 0}
+        />
       </div>
     </AppLayout>
   );
