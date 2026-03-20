@@ -16,7 +16,8 @@ import {
   User,
   MoreHorizontal,
   Loader2,
-  Paperclip
+  Paperclip,
+  MessageCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -46,6 +47,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { TaskFileUpload } from "@/components/tasks/TaskFileUpload";
 import { TaskDocuments } from "@/components/tasks/TaskDocuments";
+import { TaskDetailDialog } from "@/components/tasks/TaskDetailDialog";
+import { useUnreadTaskMessages } from "@/hooks/useTaskMessages";
 
 const priorityConfig = {
   faible: { color: "text-muted-foreground", bg: "bg-muted", label: "Basse" },
