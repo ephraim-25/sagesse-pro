@@ -71,6 +71,7 @@ const Tasks = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
   const [newTask, setNewTask] = useState({
     titre: '',
     description: '',
@@ -85,6 +86,7 @@ const Tasks = () => {
   const { data: assignableMembers } = useAssignableMembers();
   const createTask = useCreateTache();
   const updateTask = useUpdateTache();
+  const unreadCounts = useUnreadTaskMessages();
 
   // Check for overdue tasks
   const isOverdue = (task: Tache) => {
