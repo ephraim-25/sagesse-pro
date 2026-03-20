@@ -250,8 +250,8 @@ const Tasks = () => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Voir les détails</DropdownMenuItem>
-                                <DropdownMenuItem>Modifier</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}>Voir les détails</DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>Modifier</DropdownMenuItem>
                                 {task.statut !== 'termine' && (
                                   <DropdownMenuItem onClick={() => handleStatusChange(task.id, 'termine')}>
                                     Marquer comme terminée
