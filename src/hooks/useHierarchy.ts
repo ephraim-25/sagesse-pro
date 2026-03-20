@@ -144,10 +144,10 @@ export const useRemoveFromTeam = () => {
 
 // Get assignable members based on user's role hierarchy
 export const useAssignableMembers = () => {
-  const { profile, isAdmin, isPresident, isChefService, hasRole } = useAuth();
+  const { profile, isAdmin, isPresident, hasRole } = useAuth();
 
   return useQuery({
-    queryKey: ['assignable-members', profile?.id, isAdmin, isPresident, isChefService],
+    queryKey: ['assignable-members', profile?.id, isAdmin, isPresident],
     queryFn: async () => {
       if (!profile?.id) return [];
 
@@ -166,9 +166,8 @@ export const useAssignableMembers = () => {
         return data;
       }
 
-      // Chef de Division: can assign to chefs de bureau in their division
+      // Chef de service: first check grade rank
       if (hasRole('chef_service')) {
-        // First get my grade to determine if I'm a division chief
         const { data: myProfile, error: profileError } = await supabase
           .from('profiles')
           .select('service, grade:grades(rank_order)')
@@ -179,27 +178,53 @@ export const useAssignableMembers = () => {
 
         const myGradeRank = (myProfile?.grade as any)?.rank_order ?? 999;
 
-        // If I'm a division chief (rank_order ~3), I can assign to bureau chiefs
-        if (myGradeRank <= 3) {
-          const { data, error } = await supabase
+        // Division chief or director (rank <= 4): show all enrolled agents 
+        // (those who have this user as manager) + agents in same service
+        if (myGradeRank <= 4) {
+          // Get direct reports (manager_id = me)
+          const { data: directReports, error: drError } = await supabase
             .from('profiles')
             .select(`
               id, nom, prenom, fonction, service, photo_url,
               grade:grades(id, code, label, rank_order)
             `)
-            .eq('service', myProfile.service)
+            .eq('manager_id', profile.id)
             .eq('statut', 'actif')
             .order('nom');
 
-          if (error) throw error;
-          // Return only those with lower rank (bureau chiefs and below)
-          return data.filter(p => {
-            const rank = (p.grade as any)?.rank_order ?? 999;
-            return rank > myGradeRank;
+          if (drError) throw drError;
+
+          // Also get indirect reports (agents managed by my direct reports)
+          const directReportIds = directReports?.map(r => r.id) || [];
+          let indirectReports: any[] = [];
+          
+          if (directReportIds.length > 0) {
+            const { data: indirect, error: indError } = await supabase
+              .from('profiles')
+              .select(`
+                id, nom, prenom, fonction, service, photo_url,
+                grade:grades(id, code, label, rank_order)
+              `)
+              .in('manager_id', directReportIds)
+              .eq('statut', 'actif')
+              .order('nom');
+
+            if (!indError && indirect) {
+              indirectReports = indirect;
+            }
+          }
+
+          // Merge and deduplicate
+          const allReports = [...(directReports || []), ...indirectReports];
+          const seen = new Set<string>();
+          return allReports.filter(p => {
+            if (seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
           });
         }
 
-        // If I'm a bureau chief, I can only assign to my direct reports
+        // Bureau chief (rank 5): only direct reports
         const { data, error } = await supabase
           .from('profiles')
           .select(`
