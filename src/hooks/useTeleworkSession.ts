@@ -41,8 +41,8 @@ export function useTeleworkSession(): UseTeleworkSessionReturn {
   const [session, setSession] = useState<TeleworkSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const elapsedRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastHeartbeatRef = useRef<number>(Date.now());
 
   // Load active session on mount
