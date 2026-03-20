@@ -430,6 +430,14 @@ const Tasks = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Task Detail Dialog with Chat */}
+        <TaskDetailDialog
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+          unreadCount={selectedTask ? (unreadCounts[selectedTask.id] || 0) : 0}
+        />
       </div>
     </AppLayout>
   );
