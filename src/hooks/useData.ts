@@ -151,21 +151,33 @@ export const useCreateTache = () => {
       date_limite?: string | null;
       documents_lies?: string[] | null;
     }) => {
+      if (!profile?.id) throw new Error('Vous devez être connecté pour créer une tâche');
+      
+      // Ensure assigned_to is null if empty string
+      const assignedTo = tache.assigned_to && tache.assigned_to.trim() !== '' 
+        ? tache.assigned_to 
+        : null;
+
       const { data, error } = await supabase
         .from('taches')
         .insert({
           titre: tache.titre,
-          description: tache.description,
+          description: tache.description || null,
           priorite: tache.priorite || 'moyen',
-          assigned_to: tache.assigned_to,
-          date_limite: tache.date_limite,
+          assigned_to: assignedTo,
+          date_limite: tache.date_limite || null,
           documents_lies: tache.documents_lies,
-          created_by: profile?.id,
+          created_by: profile.id,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          throw new Error('Vous n\'avez pas la permission d\'assigner cette tâche. Vérifiez que l\'agent fait partie de votre équipe.');
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
