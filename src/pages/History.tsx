@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, 
+import {
+  Search,
   Calendar,
   Download,
-  Filter,
   Clock,
   LogIn,
   LogOut,
-  Laptop
+  Laptop,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -20,38 +20,75 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const historyData = [
-  { id: 1, name: "Marie Dupont", date: "2024-12-08", checkIn: "08:45", checkOut: "17:30", type: "present", duration: "8h 45min" },
-  { id: 2, name: "Jean Martin", date: "2024-12-08", checkIn: "09:00", checkOut: "—", type: "remote", duration: "En cours" },
-  { id: 3, name: "Sophie Bernard", date: "2024-12-08", checkIn: "08:30", checkOut: "16:45", type: "present", duration: "8h 15min" },
-  { id: 4, name: "Pierre Durand", date: "2024-12-08", checkIn: "—", checkOut: "—", type: "absent", duration: "—" },
-  { id: 5, name: "Claire Moreau", date: "2024-12-08", checkIn: "09:15", checkOut: "18:00", type: "present", duration: "8h 45min" },
-  { id: 6, name: "Marie Dupont", date: "2024-12-07", checkIn: "08:30", checkOut: "17:15", type: "present", duration: "8h 45min" },
-  { id: 7, name: "Jean Martin", date: "2024-12-07", checkIn: "08:45", checkOut: "17:30", type: "present", duration: "8h 45min" },
-  { id: 8, name: "Sophie Bernard", date: "2024-12-07", checkIn: "09:00", checkOut: "17:00", type: "remote", duration: "8h 00min" },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const typeConfig = {
-  present: { label: "Présent", icon: LogIn, color: "text-success bg-success/10" },
-  remote: { label: "Télétravail", icon: Laptop, color: "text-info bg-info/10" },
+  presentiel: { label: "Présent", icon: LogIn, color: "text-success bg-success/10" },
+  teletravail: { label: "Télétravail", icon: Laptop, color: "text-info bg-info/10" },
   absent: { label: "Absent", icon: LogOut, color: "text-destructive bg-destructive/10" },
 };
 
+interface PresenceRow {
+  id: string;
+  date: string;
+  heure_entree: string | null;
+  heure_sortie: string | null;
+  type: "presentiel" | "teletravail" | null;
+  user_id: string;
+  profile?: { nom: string; prenom: string };
+}
+
+const formatTime = (iso: string | null) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+};
+
+const computeDuration = (inIso: string | null, outIso: string | null) => {
+  if (!inIso) return "—";
+  if (!outIso) return "En cours";
+  const ms = new Date(outIso).getTime() - new Date(inIso).getTime();
+  if (ms <= 0) return "—";
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return `${h}h ${m.toString().padStart(2, "0")}min`;
+};
+
 const History = () => {
+  const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [rows, setRows] = useState<PresenceRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredData = historyData.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === "all" || item.type === filterType;
+  useEffect(() => {
+    const load = async () => {
+      if (!profile) return;
+      setLoading(true);
+      const { data } = await supabase
+        .from("presences")
+        .select(`*, profile:profiles!presences_user_id_fkey(nom, prenom)`)
+        .order("date", { ascending: false })
+        .limit(200);
+      setRows((data as PresenceRow[]) || []);
+      setLoading(false);
+    };
+    load();
+  }, [profile]);
+
+  const filtered = rows.filter((r) => {
+    const name = r.profile ? `${r.profile.prenom} ${r.profile.nom}` : "";
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = filterType === "all" || r.type === filterType;
     return matchesSearch && matchesType;
   });
+
+  const presentCount = rows.filter((r) => r.type === "presentiel").length;
+  const teleworkCount = rows.filter((r) => r.type === "teletravail").length;
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="page-header mb-0">
             <h1 className="page-title">Historique des Présences</h1>
@@ -63,12 +100,11 @@ const History = () => {
           </Button>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Rechercher un membre..." 
+            <Input
+              placeholder="Rechercher un membre..."
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -80,9 +116,8 @@ const History = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les types</SelectItem>
-              <SelectItem value="present">Présent</SelectItem>
-              <SelectItem value="remote">Télétravail</SelectItem>
-              <SelectItem value="absent">Absent</SelectItem>
+              <SelectItem value="presentiel">Présent</SelectItem>
+              <SelectItem value="teletravail">Télétravail</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline">
@@ -91,95 +126,107 @@ const History = () => {
           </Button>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-card rounded-xl p-4 shadow-soft border border-border/50">
-            <p className="text-2xl font-bold text-success">186</p>
-            <p className="text-sm text-muted-foreground">Jours présentiels</p>
+            <p className="text-2xl font-bold text-success">{presentCount}</p>
+            <p className="text-sm text-muted-foreground">Pointages présentiels</p>
           </div>
           <div className="bg-card rounded-xl p-4 shadow-soft border border-border/50">
-            <p className="text-2xl font-bold text-info">42</p>
-            <p className="text-sm text-muted-foreground">Jours télétravail</p>
+            <p className="text-2xl font-bold text-info">{teleworkCount}</p>
+            <p className="text-sm text-muted-foreground">Pointages télétravail</p>
           </div>
           <div className="bg-card rounded-xl p-4 shadow-soft border border-border/50">
-            <p className="text-2xl font-bold text-destructive">12</p>
-            <p className="text-sm text-muted-foreground">Jours d'absence</p>
-          </div>
-          <div className="bg-card rounded-xl p-4 shadow-soft border border-border/50">
-            <p className="text-2xl font-bold text-foreground">8h 22min</p>
-            <p className="text-sm text-muted-foreground">Durée moyenne</p>
+            <p className="text-2xl font-bold text-foreground">{rows.length}</p>
+            <p className="text-sm text-muted-foreground">Total enregistrements</p>
           </div>
         </div>
 
-        {/* History Table */}
         <div className="bg-card rounded-xl shadow-soft border border-border/50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Membre</th>
-                  <th>Date</th>
-                  <th>Arrivée</th>
-                  <th>Départ</th>
-                  <th>Durée</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map((item) => {
-                  const typeInfo = typeConfig[item.type as keyof typeof typeConfig];
-                  const TypeIcon = typeInfo.icon;
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <Clock className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">Aucun historique disponible</p>
+              <p className="text-xs text-muted-foreground/80 mt-1">
+                Les pointages des membres apparaîtront ici dès qu'ils seront enregistrés.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Membre</th>
+                    <th>Date</th>
+                    <th>Arrivée</th>
+                    <th>Départ</th>
+                    <th>Durée</th>
+                    <th>Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((item) => {
+                    const typeKey = (item.type || "presentiel") as keyof typeof typeConfig;
+                    const typeInfo = typeConfig[typeKey];
+                    const TypeIcon = typeInfo.icon;
+                    const name = item.profile ? `${item.profile.prenom} ${item.profile.nom}` : "Inconnu";
 
-                  return (
-                    <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                            {item.name.split(' ').map(n => n[0]).join('')}
+                    return (
+                      <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                              {name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                            </div>
+                            <span className="font-medium">{name}</span>
                           </div>
-                          <span className="font-medium">{item.name}</span>
-                        </div>
-                      </td>
-                      <td className="text-muted-foreground">
-                        {new Date(item.date).toLocaleDateString('fr-FR', { 
-                          weekday: 'short', 
-                          day: 'numeric', 
-                          month: 'short' 
-                        })}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <LogIn className="w-4 h-4 text-success" />
-                          <span>{item.checkIn}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <LogOut className="w-4 h-4 text-destructive" />
-                          <span>{item.checkOut}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span>{item.duration}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={cn(
-                          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
-                          typeInfo.color
-                        )}>
-                          <TypeIcon className="w-3 h-3" />
-                          {typeInfo.label}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="text-muted-foreground">
+                          {new Date(item.date).toLocaleDateString("fr-FR", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <LogIn className="w-4 h-4 text-success" />
+                            <span>{formatTime(item.heure_entree)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <LogOut className="w-4 h-4 text-destructive" />
+                            <span>{formatTime(item.heure_sortie)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-muted-foreground" />
+                            <span>{computeDuration(item.heure_entree, item.heure_sortie)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
+                              typeInfo.color
+                            )}
+                          >
+                            <TypeIcon className="w-3 h-3" />
+                            {typeInfo.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>
