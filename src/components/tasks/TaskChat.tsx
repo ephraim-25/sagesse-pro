@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Send, Loader2, CheckCheck, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ChatAttachmentPicker, type ChatAttachment } from "./ChatAttachmentPicker";
+import { ChatAttachmentList } from "./ChatAttachmentList";
 
 interface TaskChatProps {
   taskId: string;
