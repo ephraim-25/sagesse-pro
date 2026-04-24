@@ -50,6 +50,8 @@ const profileSchema = z.object({
   date_notification: z.string().optional(),
   date_octroi_matricule: z.string().optional(),
   direction: z.string().optional(),
+  double_affectation: z.string().optional(),
+  fonction_double_affectation: z.string().optional(),
 });
 
 const NIVEAU_ETUDES = [
@@ -60,6 +62,8 @@ const NIVEAU_ETUDES = [
   'Doctorat',
   'Autre',
 ];
+
+const DOUBLE_AFFECTATIONS = ['Aucun', 'Revue', 'NTIC', 'Archivage'];
 
 const Profile = () => {
   const { profile, grade, refreshUserData, user } = useAuth();
@@ -81,6 +85,8 @@ const Profile = () => {
     date_notification: '',
     date_octroi_matricule: '',
     direction: '',
+    double_affectation: '',
+    fonction_double_affectation: '',
   });
 
   useEffect(() => {
@@ -101,6 +107,8 @@ const Profile = () => {
         date_notification: p.date_notification || '',
         date_octroi_matricule: p.date_octroi_matricule || '',
         direction: p.direction || '',
+        double_affectation: p.double_affectation || '',
+        fonction_double_affectation: p.fonction_double_affectation || '',
       });
     }
   }, [profile]);
