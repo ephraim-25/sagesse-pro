@@ -166,27 +166,47 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
 
       {/* Input */}
       {isParticipant ? (
-        <div className="p-3 border-t border-border flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Écrire un message..."
-            className="flex-1 rounded-full"
-            disabled={sending}
-          />
-          <Button
-            size="icon"
-            className="rounded-full flex-shrink-0"
-            onClick={handleSend}
-            disabled={!input.trim() || sending}
-          >
-            {sending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
+        <div className="border-t border-border">
+          {attachments.length > 0 && (
+            <div className="px-3 pt-2">
+              <ChatAttachmentPicker
+                attachments={attachments}
+                onChange={setAttachments}
+                disabled={sending}
+              />
+            </div>
+          )}
+          <div className="p-3 flex gap-2 items-center">
+            {attachments.length === 0 && (
+              <ChatAttachmentPicker
+                attachments={attachments}
+                onChange={setAttachments}
+                disabled={sending}
+              />
             )}
-          </Button>
+            <Input
+              value={input}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Écrire un message..."
+              className="flex-1 rounded-full"
+              disabled={sending}
+              data-testid="chat-message-input"
+            />
+            <Button
+              size="icon"
+              className="rounded-full flex-shrink-0"
+              onClick={handleSend}
+              disabled={(!input.trim() && attachments.length === 0) || sending}
+              data-testid="chat-send-button"
+            >
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="p-3 border-t border-border text-center">
