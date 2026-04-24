@@ -1,18 +1,44 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, 
-  X, 
-  FileText, 
-  Image as ImageIcon, 
-  File, 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Upload,
+  X,
+  FileText,
+  Image as ImageIcon,
+  File,
   Loader2,
-  Paperclip
+  Paperclip,
+  AlertCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+function explainUploadError(err: { message?: string; statusCode?: string | number } | null | undefined, fileName: string): string {
+  const raw = err?.message || '';
+  const status = String(err?.statusCode ?? '');
+  const msg = raw.toLowerCase();
+
+  if (msg.includes('row-level security') || msg.includes('rls') || status === '403' || msg.includes('unauthorized')) {
+    return `Accès refusé pour « ${fileName} ». Votre rôle ne permet pas d'envoyer ce document. Contactez un administrateur si le problème persiste.`;
+  }
+  if (msg.includes('bucket') && msg.includes('not found')) {
+    return `L'espace de stockage est introuvable. Veuillez réessayer dans un instant ou contacter un administrateur.`;
+  }
+  if (msg.includes('exceeded') || msg.includes('too large') || status === '413') {
+    return `« ${fileName} » dépasse la taille autorisée (10 Mo).`;
+  }
+  if (msg.includes('mime') || msg.includes('not allowed')) {
+    return `Le format de « ${fileName} » n'est pas autorisé.`;
+  }
+  if (msg.includes('network') || msg.includes('failed to fetch')) {
+    return `Connexion interrompue lors de l'envoi de « ${fileName} ». Vérifiez votre réseau et réessayez.`;
+  }
+  if (raw) return `Échec de l'envoi de « ${fileName} » : ${raw}`;
+  return `Échec de l'envoi de « ${fileName} ». Veuillez réessayer.`;
+}
 
 interface TaskFileUploadProps {
   onFilesUploaded: (urls: string[]) => void;
