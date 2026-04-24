@@ -153,7 +153,7 @@ export function useTaskMessages(taskId: string | null) {
             if (data) {
               setMessages(prev => {
                 if (prev.some(m => m.id === data.id)) return prev;
-                return [...prev, data as TaskMessage];
+                return [...prev, mapRow(data)];
               });
             }
           });
