@@ -50,6 +50,8 @@ const profileSchema = z.object({
   date_notification: z.string().optional(),
   date_octroi_matricule: z.string().optional(),
   direction: z.string().optional(),
+  double_affectation: z.string().optional(),
+  fonction_double_affectation: z.string().optional(),
 });
 
 const NIVEAU_ETUDES = [
@@ -60,6 +62,8 @@ const NIVEAU_ETUDES = [
   'Doctorat',
   'Autre',
 ];
+
+const DOUBLE_AFFECTATIONS = ['Aucun', 'Revue', 'NTIC', 'Archivage'];
 
 const Profile = () => {
   const { profile, grade, refreshUserData, user } = useAuth();
@@ -81,6 +85,8 @@ const Profile = () => {
     date_notification: '',
     date_octroi_matricule: '',
     direction: '',
+    double_affectation: '',
+    fonction_double_affectation: '',
   });
 
   useEffect(() => {
@@ -101,6 +107,8 @@ const Profile = () => {
         date_notification: p.date_notification || '',
         date_octroi_matricule: p.date_octroi_matricule || '',
         direction: p.direction || '',
+        double_affectation: p.double_affectation || '',
+        fonction_double_affectation: p.fonction_double_affectation || '',
       });
     }
   }, [profile]);
@@ -192,7 +200,7 @@ const Profile = () => {
 
       const { error } = await supabase
         .from('profiles')
-        .update(cleanedData)
+        .update(cleanedData as any)
         .eq('id', profile.id);
 
       if (error) throw error;
@@ -501,6 +509,47 @@ const Profile = () => {
                         value={formData.fonction}
                         onChange={(e) => handleInputChange('fonction', e.target.value)}
                         placeholder="Ex: Analyste de données"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Double affectation */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Double Affectation
+                  </h4>
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Si vous êtes rattaché à une cellule transversale (Revue, NTIC, Archivage), précisez-le ici.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="double_affectation">Cellule de double affectation</Label>
+                      <Select
+                        value={formData.double_affectation || 'Aucun'}
+                        onValueChange={(value) => handleInputChange('double_affectation', value === 'Aucun' ? '' : value)}
+                      >
+                        <SelectTrigger id="double_affectation">
+                          <SelectValue placeholder="Sélectionner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DOUBLE_AFFECTATIONS.map((item) => (
+                            <SelectItem key={item} value={item}>{item}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fonction_double_affectation">Fonction dans la cellule</Label>
+                      <Input
+                        id="fonction_double_affectation"
+                        value={formData.fonction_double_affectation}
+                        onChange={(e) => handleInputChange('fonction_double_affectation', e.target.value)}
+                        placeholder="Ex: Rédacteur, Technicien réseau..."
+                        disabled={!formData.double_affectation}
                       />
                     </div>
                   </div>

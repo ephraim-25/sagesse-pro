@@ -439,8 +439,10 @@ export type Database = {
           date_notification: string | null
           date_octroi_matricule: string | null
           direction: string | null
+          double_affectation: string | null
           email: string
           fonction: string | null
+          fonction_double_affectation: string | null
           grade_id: string | null
           id: string
           last_activity_at: string | null
@@ -470,8 +472,10 @@ export type Database = {
           date_notification?: string | null
           date_octroi_matricule?: string | null
           direction?: string | null
+          double_affectation?: string | null
           email: string
           fonction?: string | null
+          fonction_double_affectation?: string | null
           grade_id?: string | null
           id?: string
           last_activity_at?: string | null
@@ -501,8 +505,10 @@ export type Database = {
           date_notification?: string | null
           date_octroi_matricule?: string | null
           direction?: string | null
+          double_affectation?: string | null
           email?: string
           fonction?: string | null
+          fonction_double_affectation?: string | null
           grade_id?: string | null
           id?: string
           last_activity_at?: string | null

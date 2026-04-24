@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, 
+import {
+  Search,
   Plus,
   Award,
   BookOpen,
@@ -12,10 +12,13 @@ import {
   Languages,
   Presentation,
   Users,
-  TrendingUp
+  TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const competenceCategories = [
   { id: 1, name: "Technique", icon: Code, color: "text-info bg-info/10" },
@@ -25,65 +28,50 @@ const competenceCategories = [
   { id: 5, name: "Management", icon: Users, color: "text-primary bg-primary/10" },
 ];
 
-const memberCompetences = [
-  {
-    id: 1,
-    name: "Marie Dupont",
-    avatar: "MD",
-    department: "Recherche",
-    level: "Expert",
-    competences: [
-      { name: "Analyse de données", level: 95, category: "Analytique" },
-      { name: "Rédaction scientifique", level: 90, category: "Communication" },
-      { name: "Python", level: 85, category: "Technique" },
-      { name: "Anglais", level: 80, category: "Langues" },
-    ],
-    recommendedRole: "Directrice de Recherche"
-  },
-  {
-    id: 2,
-    name: "Jean Martin",
-    avatar: "JM",
-    department: "IT",
-    level: "Expert",
-    competences: [
-      { name: "Développement Web", level: 98, category: "Technique" },
-      { name: "Cybersécurité", level: 92, category: "Technique" },
-      { name: "Gestion de projet", level: 75, category: "Management" },
-      { name: "Documentation technique", level: 88, category: "Communication" },
-    ],
-    recommendedRole: "Architecte Système"
-  },
-  {
-    id: 3,
-    name: "Sophie Bernard",
-    avatar: "SB",
-    department: "Communication",
-    level: "Intermédiaire",
-    competences: [
-      { name: "Communication digitale", level: 90, category: "Communication" },
-      { name: "Réseaux sociaux", level: 85, category: "Communication" },
-      { name: "Design graphique", level: 70, category: "Technique" },
-      { name: "Anglais", level: 92, category: "Langues" },
-    ],
-    recommendedRole: "Responsable Communication"
-  },
-];
-
-const levelColors = {
-  Expert: "bg-accent/10 text-accent border-accent/20",
-  Intermédiaire: "bg-info/10 text-info border-info/20",
-  Junior: "bg-muted text-muted-foreground border-border",
-};
+interface Competence {
+  id: string;
+  competence: string;
+  niveau: number;
+  user_id: string;
+  profile?: { nom: string; prenom: string };
+}
 
 const Competences = () => {
+  const { profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [competences, setCompetences] = useState<Competence[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!profile) return;
+      setLoading(true);
+      const { data } = await supabase
+        .from("competences")
+        .select(`*, profile:profiles!competences_user_id_fkey(nom, prenom)`)
+        .order("created_at", { ascending: false });
+      setCompetences((data as Competence[]) || []);
+      setLoading(false);
+    };
+    load();
+  }, [profile]);
+
+  const filtered = competences.filter((c) => {
+    const name = c.profile ? `${c.profile.prenom} ${c.profile.nom}` : "";
+    return (
+      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.competence.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  const totalExperts = competences.filter((c) => (c.niveau ?? 0) >= 4).length;
+  const totalCompetences = competences.length;
+  const uniqueMembers = new Set(competences.map((c) => c.user_id)).size;
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="page-header mb-0">
             <h1 className="page-title">Cartographie des Compétences</h1>
@@ -95,9 +83,8 @@ const Competences = () => {
           </Button>
         </div>
 
-        {/* Category Filters */}
         <div className="flex flex-wrap gap-3">
-          <Button 
+          <Button
             variant={selectedCategory === null ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedCategory(null)}
@@ -105,7 +92,7 @@ const Competences = () => {
             Toutes
           </Button>
           {competenceCategories.map((cat) => (
-            <Button 
+            <Button
               key={cat.id}
               variant={selectedCategory === cat.name ? "default" : "outline"}
               size="sm"
@@ -118,18 +105,16 @@ const Competences = () => {
           ))}
         </div>
 
-        {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Rechercher un membre ou une compétence..." 
+          <Input
+            placeholder="Rechercher un membre ou une compétence..."
             className="pl-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-card rounded-xl p-5 shadow-soft border border-border/50">
             <div className="flex items-center gap-3">
@@ -137,7 +122,7 @@ const Competences = () => {
                 <Award className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">24</p>
+                <p className="text-2xl font-bold">{totalExperts}</p>
                 <p className="text-sm text-muted-foreground">Experts</p>
               </div>
             </div>
@@ -148,7 +133,7 @@ const Competences = () => {
                 <BookOpen className="w-5 h-5 text-info" />
               </div>
               <div>
-                <p className="text-2xl font-bold">156</p>
+                <p className="text-2xl font-bold">{totalCompetences}</p>
                 <p className="text-sm text-muted-foreground">Compétences</p>
               </div>
             </div>
@@ -159,8 +144,8 @@ const Competences = () => {
                 <TrendingUp className="w-5 h-5 text-success" />
               </div>
               <div>
-                <p className="text-2xl font-bold">87%</p>
-                <p className="text-sm text-muted-foreground">Couverture</p>
+                <p className="text-2xl font-bold">{uniqueMembers}</p>
+                <p className="text-sm text-muted-foreground">Membres évalués</p>
               </div>
             </div>
           </div>
@@ -170,64 +155,52 @@ const Competences = () => {
                 <Users className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">0</p>
                 <p className="text-sm text-muted-foreground">Formations en cours</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Members Competences */}
-        <div className="space-y-4">
-          {memberCompetences.map((member) => (
-            <div 
-              key={member.id}
-              className="bg-card rounded-xl p-6 shadow-soft border border-border/50"
-            >
-              <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                {/* Member Info */}
-                <div className="flex items-center gap-4 lg:w-64 flex-shrink-0">
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    {member.avatar}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{member.name}</h3>
-                    <p className="text-sm text-muted-foreground">{member.department}</p>
-                    <span className={cn(
-                      "inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium border",
-                      levelColors[member.level as keyof typeof levelColors]
-                    )}>
-                      {member.level}
-                    </span>
-                  </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-card rounded-xl p-12 shadow-soft border border-border/50 text-center">
+            <Award className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Aucune compétence enregistrée</p>
+            <p className="text-xs text-muted-foreground/80 mt-1">
+              Commencez par ajouter une compétence pour cartographier votre expertise.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((c) => (
+              <div
+                key={c.id}
+                className="bg-card rounded-xl p-5 shadow-soft border border-border/50 flex items-center gap-4"
+              >
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                  {c.profile ? `${c.profile.prenom[0]}${c.profile.nom[0]}` : "?"}
                 </div>
-
-                {/* Competences */}
-                <div className="flex-1 space-y-3">
-                  {member.competences
-                    .filter(c => !selectedCategory || c.category === selectedCategory)
-                    .map((comp, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{comp.name}</span>
-                        <span className="text-muted-foreground">{comp.level}%</span>
-                      </div>
-                      <Progress value={comp.level} className="h-2" />
-                    </div>
-                  ))}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">
+                    {c.profile ? `${c.profile.prenom} ${c.profile.nom}` : "Inconnu"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{c.competence}</p>
                 </div>
-
-                {/* Recommended Role */}
-                <div className="lg:w-48 flex-shrink-0">
-                  <div className="p-3 bg-accent/5 rounded-lg border border-accent/20">
-                    <p className="text-xs text-muted-foreground mb-1">Rôle recommandé</p>
-                    <p className="text-sm font-medium text-accent">{member.recommendedRole}</p>
+                <div className="w-32">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Niveau</span>
+                    <span className="font-medium">{c.niveau}/5</span>
                   </div>
+                  <Progress value={(c.niveau / 5) * 100} className="h-2" />
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   );
