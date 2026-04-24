@@ -122,16 +122,21 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
                     {senderName}
                   </p>
                 )}
-                <div
-                  className={cn(
-                    "rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
-                    isMine
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-muted rounded-bl-md"
-                  )}
-                >
-                  {msg.content}
-                </div>
+                {(msg.content || (msg.attachments && msg.attachments.length > 0)) && (
+                  <div
+                    className={cn(
+                      "rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
+                      isMine
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-muted rounded-bl-md"
+                    )}
+                  >
+                    {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <ChatAttachmentList attachments={msg.attachments} isMine={isMine} />
+                    )}
+                  </div>
+                )}
                 <div className={cn("flex items-center gap-1 mt-0.5", isMine ? "justify-end" : "")}>
                   <span className="text-[10px] text-muted-foreground">
                     {formatTime(msg.created_at)}
