@@ -162,8 +162,8 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="space-y-3" data-testid="task-file-upload">
+      <div className="flex items-center gap-2 flex-wrap">
         <input
           ref={fileInputRef}
           type="file"
@@ -172,6 +172,7 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
           onChange={handleFileSelect}
           className="hidden"
           disabled={disabled || uploading}
+          data-testid="task-file-upload-input"
         />
         <Button
           type="button"
@@ -180,6 +181,7 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
           className="gap-2"
+          data-testid="task-file-upload-button"
         >
           {uploading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -192,6 +194,17 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
           PDF, Word, PNG, JPEG (max 10 Mo)
         </span>
       </div>
+
+      {uploadError && (
+        <Alert variant="destructive" data-testid="task-file-upload-error">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Échec de l'envoi du document</AlertTitle>
+          <AlertDescription className="whitespace-pre-line">
+            {uploadError}
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       {uploadedFiles.length > 0 && (
         <div className="flex flex-wrap gap-2">
