@@ -3,11 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+export interface TaskMessageAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 export interface TaskMessage {
   id: string;
   task_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
+  attachments: TaskMessageAttachment[];
   read: boolean;
   read_at: string | null;
   created_at: string;
