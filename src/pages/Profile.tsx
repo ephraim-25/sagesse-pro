@@ -200,7 +200,7 @@ const Profile = () => {
 
       const { error } = await supabase
         .from('profiles')
-        .update(cleanedData)
+        .update(cleanedData as any)
         .eq('id', profile.id);
 
       if (error) throw error;
