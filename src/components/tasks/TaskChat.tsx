@@ -22,6 +22,7 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
   const { messages, loading, typingUser, sendMessage, sendTyping, stopTyping, markAsRead } =
     useTaskMessages(taskId);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,11 +42,12 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
   }, [messages.length, markAsRead]);
 
   const handleSend = async () => {
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && attachments.length === 0) || sending) return;
     setSending(true);
     try {
-      await sendMessage(input);
+      await sendMessage(input, attachments);
       setInput("");
+      setAttachments([]);
       stopTyping();
     } catch {
       toast.error("Erreur lors de l'envoi du message");
