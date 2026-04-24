@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Send, Loader2, CheckCheck, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ChatAttachmentPicker, type ChatAttachment } from "./ChatAttachmentPicker";
+import { ChatAttachmentList } from "./ChatAttachmentList";
 
 interface TaskChatProps {
   taskId: string;
@@ -20,6 +22,7 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
   const { messages, loading, typingUser, sendMessage, sendTyping, stopTyping, markAsRead } =
     useTaskMessages(taskId);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,11 +42,12 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
   }, [messages.length, markAsRead]);
 
   const handleSend = async () => {
-    if (!input.trim() || sending) return;
+    if ((!input.trim() && attachments.length === 0) || sending) return;
     setSending(true);
     try {
-      await sendMessage(input);
+      await sendMessage(input, attachments);
       setInput("");
+      setAttachments([]);
       stopTyping();
     } catch {
       toast.error("Erreur lors de l'envoi du message");
@@ -118,16 +122,21 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
                     {senderName}
                   </p>
                 )}
-                <div
-                  className={cn(
-                    "rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
-                    isMine
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-muted rounded-bl-md"
-                  )}
-                >
-                  {msg.content}
-                </div>
+                {(msg.content || (msg.attachments && msg.attachments.length > 0)) && (
+                  <div
+                    className={cn(
+                      "rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
+                      isMine
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-muted rounded-bl-md"
+                    )}
+                  >
+                    {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <ChatAttachmentList attachments={msg.attachments} isMine={isMine} />
+                    )}
+                  </div>
+                )}
                 <div className={cn("flex items-center gap-1 mt-0.5", isMine ? "justify-end" : "")}>
                   <span className="text-[10px] text-muted-foreground">
                     {formatTime(msg.created_at)}
@@ -157,27 +166,47 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
 
       {/* Input */}
       {isParticipant ? (
-        <div className="p-3 border-t border-border flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Écrire un message..."
-            className="flex-1 rounded-full"
-            disabled={sending}
-          />
-          <Button
-            size="icon"
-            className="rounded-full flex-shrink-0"
-            onClick={handleSend}
-            disabled={!input.trim() || sending}
-          >
-            {sending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
+        <div className="border-t border-border">
+          {attachments.length > 0 && (
+            <div className="px-3 pt-2">
+              <ChatAttachmentPicker
+                attachments={attachments}
+                onChange={setAttachments}
+                disabled={sending}
+              />
+            </div>
+          )}
+          <div className="p-3 flex gap-2 items-center">
+            {attachments.length === 0 && (
+              <ChatAttachmentPicker
+                attachments={attachments}
+                onChange={setAttachments}
+                disabled={sending}
+              />
             )}
-          </Button>
+            <Input
+              value={input}
+              onChange={(e) => handleInputChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Écrire un message..."
+              className="flex-1 rounded-full"
+              disabled={sending}
+              data-testid="chat-message-input"
+            />
+            <Button
+              size="icon"
+              className="rounded-full flex-shrink-0"
+              onClick={handleSend}
+              disabled={(!input.trim() && attachments.length === 0) || sending}
+              data-testid="chat-send-button"
+            >
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="p-3 border-t border-border text-center">

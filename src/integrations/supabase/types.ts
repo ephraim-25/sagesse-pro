@@ -699,7 +699,8 @@ export type Database = {
       }
       task_messages: {
         Row: {
-          content: string
+          attachments: Json
+          content: string | null
           created_at: string
           id: string
           read: boolean
@@ -708,7 +709,8 @@ export type Database = {
           task_id: string
         }
         Insert: {
-          content: string
+          attachments?: Json
+          content?: string | null
           created_at?: string
           id?: string
           read?: boolean
@@ -717,7 +719,8 @@ export type Database = {
           task_id: string
         }
         Update: {
-          content?: string
+          attachments?: Json
+          content?: string | null
           created_at?: string
           id?: string
           read?: boolean

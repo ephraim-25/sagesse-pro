@@ -1,18 +1,44 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Upload, 
-  X, 
-  FileText, 
-  Image as ImageIcon, 
-  File, 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Upload,
+  X,
+  FileText,
+  Image as ImageIcon,
+  File,
   Loader2,
-  Paperclip
+  Paperclip,
+  AlertCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+function explainUploadError(err: { message?: string; statusCode?: string | number } | null | undefined, fileName: string): string {
+  const raw = err?.message || '';
+  const status = String(err?.statusCode ?? '');
+  const msg = raw.toLowerCase();
+
+  if (msg.includes('row-level security') || msg.includes('rls') || status === '403' || msg.includes('unauthorized')) {
+    return `Accès refusé pour « ${fileName} ». Votre rôle ne permet pas d'envoyer ce document. Contactez un administrateur si le problème persiste.`;
+  }
+  if (msg.includes('bucket') && msg.includes('not found')) {
+    return `L'espace de stockage est introuvable. Veuillez réessayer dans un instant ou contacter un administrateur.`;
+  }
+  if (msg.includes('exceeded') || msg.includes('too large') || status === '413') {
+    return `« ${fileName} » dépasse la taille autorisée (10 Mo).`;
+  }
+  if (msg.includes('mime') || msg.includes('not allowed')) {
+    return `Le format de « ${fileName} » n'est pas autorisé.`;
+  }
+  if (msg.includes('network') || msg.includes('failed to fetch')) {
+    return `Connexion interrompue lors de l'envoi de « ${fileName} ». Vérifiez votre réseau et réessayez.`;
+  }
+  if (raw) return `Échec de l'envoi de « ${fileName} » : ${raw}`;
+  return `Échec de l'envoi de « ${fileName} ». Veuillez réessayer.`;
+}
 
 interface TaskFileUploadProps {
   onFilesUploaded: (urls: string[]) => void;
@@ -39,6 +65,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }: TaskFileUploadProps) => {
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>(
     existingFiles.map(url => ({
       name: url.split('/').pop() || 'file',
@@ -55,21 +82,27 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    setUploadError(null);
 
     // Validate files
     for (const file of files) {
       if (!Object.keys(ALLOWED_TYPES).includes(file.type)) {
-        toast.error(`Type de fichier non supporté: ${file.name}. Utilisez PDF, Word, PNG ou JPEG.`);
+        const msg = `Type de fichier non supporté : « ${file.name} ». Formats acceptés : PDF, Word, PNG, JPEG.`;
+        setUploadError(msg);
+        toast.error(msg);
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`Fichier trop volumineux: ${file.name}. Maximum 10 Mo.`);
+        const msg = `« ${file.name} » dépasse la taille maximale de 10 Mo.`;
+        setUploadError(msg);
+        toast.error(msg);
         return;
       }
     }
 
     setUploading(true);
     const newFiles: UploadedFile[] = [];
+    const errors: string[] = [];
 
     try {
       for (const file of files) {
@@ -83,7 +116,9 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
-          toast.error(`Erreur lors de l'upload de ${file.name}`);
+          const friendly = explainUploadError(uploadError as any, file.name);
+          errors.push(friendly);
+          toast.error(friendly);
           continue;
         }
 
@@ -102,11 +137,16 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
         const allFiles = [...uploadedFiles, ...newFiles];
         setUploadedFiles(allFiles);
         onFilesUploaded(allFiles.map(f => f.url));
-        toast.success(`${newFiles.length} fichier(s) uploadé(s)`);
+        toast.success(`${newFiles.length} fichier(s) ajouté(s)`);
       }
-    } catch (error) {
+      if (errors.length > 0) {
+        setUploadError(errors.join(' • '));
+      }
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Erreur lors de l\'upload');
+      const friendly = explainUploadError(error, files[0]?.name || 'document');
+      setUploadError(friendly);
+      toast.error(friendly);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -122,8 +162,8 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="space-y-3" data-testid="task-file-upload">
+      <div className="flex items-center gap-2 flex-wrap">
         <input
           ref={fileInputRef}
           type="file"
@@ -132,6 +172,7 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
           onChange={handleFileSelect}
           className="hidden"
           disabled={disabled || uploading}
+          data-testid="task-file-upload-input"
         />
         <Button
           type="button"
@@ -140,6 +181,7 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
           className="gap-2"
+          data-testid="task-file-upload-button"
         >
           {uploading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -152,6 +194,17 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
           PDF, Word, PNG, JPEG (max 10 Mo)
         </span>
       </div>
+
+      {uploadError && (
+        <Alert variant="destructive" data-testid="task-file-upload-error">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Échec de l'envoi du document</AlertTitle>
+          <AlertDescription className="whitespace-pre-line">
+            {uploadError}
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       {uploadedFiles.length > 0 && (
         <div className="flex flex-wrap gap-2">

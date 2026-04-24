@@ -3,11 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+export interface TaskMessageAttachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 export interface TaskMessage {
   id: string;
   task_id: string;
   sender_id: string;
-  content: string;
+  content: string | null;
+  attachments: TaskMessageAttachment[];
   read: boolean;
   read_at: string | null;
   created_at: string;
@@ -27,6 +35,18 @@ export function useTaskMessages(taskId: string | null) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const mapRow = (row: any): TaskMessage => ({
+    id: row.id,
+    task_id: row.task_id,
+    sender_id: row.sender_id,
+    content: row.content ?? null,
+    attachments: Array.isArray(row.attachments) ? (row.attachments as TaskMessageAttachment[]) : [],
+    read: row.read,
+    read_at: row.read_at,
+    created_at: row.created_at,
+    sender: row.sender,
+  });
+
   // Fetch last 50 messages
   const fetchMessages = useCallback(async () => {
     if (!taskId) return;
@@ -40,7 +60,7 @@ export function useTaskMessages(taskId: string | null) {
       .limit(50);
 
     if (!error && data) {
-      setMessages(data as TaskMessage[]);
+      setMessages(data.map(mapRow));
     }
     setLoading(false);
   }, [taskId]);
@@ -68,14 +88,17 @@ export function useTaskMessages(taskId: string | null) {
     );
   }, [taskId, profile?.id, messages]);
 
-  // Send message
-  const sendMessage = useCallback(async (content: string) => {
-    if (!taskId || !profile?.id || !content.trim()) return;
+  // Send message (text and/or attachments)
+  const sendMessage = useCallback(async (content: string, attachments: TaskMessageAttachment[] = []) => {
+    if (!taskId || !profile?.id) return;
+    const trimmed = content.trim();
+    if (!trimmed && attachments.length === 0) return;
 
     const { error } = await supabase.from('task_messages').insert({
       task_id: taskId,
       sender_id: profile.id,
-      content: content.trim(),
+      content: trimmed || null,
+      attachments: attachments as any,
     });
 
     if (error) throw error;
@@ -130,7 +153,7 @@ export function useTaskMessages(taskId: string | null) {
             if (data) {
               setMessages(prev => {
                 if (prev.some(m => m.id === data.id)) return prev;
-                return [...prev, data as TaskMessage];
+                return [...prev, mapRow(data)];
               });
             }
           });
