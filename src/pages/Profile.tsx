@@ -516,6 +516,47 @@ const Profile = () => {
 
                 <Separator />
 
+                {/* Double affectation */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Double Affectation
+                  </h4>
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Si vous êtes rattaché à une cellule transversale (Revue, NTIC, Archivage), précisez-le ici.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="double_affectation">Cellule de double affectation</Label>
+                      <Select
+                        value={formData.double_affectation || 'Aucun'}
+                        onValueChange={(value) => handleInputChange('double_affectation', value === 'Aucun' ? '' : value)}
+                      >
+                        <SelectTrigger id="double_affectation">
+                          <SelectValue placeholder="Sélectionner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DOUBLE_AFFECTATIONS.map((item) => (
+                            <SelectItem key={item} value={item}>{item}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fonction_double_affectation">Fonction dans la cellule</Label>
+                      <Input
+                        id="fonction_double_affectation"
+                        value={formData.fonction_double_affectation}
+                        onChange={(e) => handleInputChange('fonction_double_affectation', e.target.value)}
+                        placeholder="Ex: Rédacteur, Technicien réseau..."
+                        disabled={!formData.double_affectation}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
                 {/* Données administratives */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
