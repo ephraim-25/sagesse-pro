@@ -65,6 +65,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }: TaskFileUploadProps) => {
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>(
     existingFiles.map(url => ({
       name: url.split('/').pop() || 'file',
@@ -81,21 +82,27 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    setUploadError(null);
 
     // Validate files
     for (const file of files) {
       if (!Object.keys(ALLOWED_TYPES).includes(file.type)) {
-        toast.error(`Type de fichier non supporté: ${file.name}. Utilisez PDF, Word, PNG ou JPEG.`);
+        const msg = `Type de fichier non supporté : « ${file.name} ». Formats acceptés : PDF, Word, PNG, JPEG.`;
+        setUploadError(msg);
+        toast.error(msg);
         return;
       }
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`Fichier trop volumineux: ${file.name}. Maximum 10 Mo.`);
+        const msg = `« ${file.name} » dépasse la taille maximale de 10 Mo.`;
+        setUploadError(msg);
+        toast.error(msg);
         return;
       }
     }
 
     setUploading(true);
     const newFiles: UploadedFile[] = [];
+    const errors: string[] = [];
 
     try {
       for (const file of files) {
@@ -109,7 +116,9 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
-          toast.error(`Erreur lors de l'upload de ${file.name}`);
+          const friendly = explainUploadError(uploadError as any, file.name);
+          errors.push(friendly);
+          toast.error(friendly);
           continue;
         }
 
@@ -128,11 +137,16 @@ export const TaskFileUpload = ({ onFilesUploaded, existingFiles = [], disabled }
         const allFiles = [...uploadedFiles, ...newFiles];
         setUploadedFiles(allFiles);
         onFilesUploaded(allFiles.map(f => f.url));
-        toast.success(`${newFiles.length} fichier(s) uploadé(s)`);
+        toast.success(`${newFiles.length} fichier(s) ajouté(s)`);
       }
-    } catch (error) {
+      if (errors.length > 0) {
+        setUploadError(errors.join(' • '));
+      }
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Erreur lors de l\'upload');
+      const friendly = explainUploadError(error, files[0]?.name || 'document');
+      setUploadError(friendly);
+      toast.error(friendly);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
