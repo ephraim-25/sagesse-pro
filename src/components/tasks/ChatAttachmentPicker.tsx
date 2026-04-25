@@ -18,8 +18,39 @@ interface ChatAttachmentPickerProps {
   disabled?: boolean;
 }
 
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-const ACCEPTED = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt";
+export const CHAT_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+export const CHAT_ATTACHMENT_ACCEPT = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt";
+const MAX_SIZE = CHAT_ATTACHMENT_MAX_SIZE;
+const ACCEPTED = CHAT_ATTACHMENT_ACCEPT;
+
+/**
+ * Uploads files to the task chat bucket and returns ChatAttachment metadata.
+ * Used by the picker AND by the drag-and-drop handler in TaskChat.
+ */
+export async function uploadChatFiles(
+  files: File[],
+  onError: (msg: string) => void
+): Promise<ChatAttachment[]> {
+  const out: ChatAttachment[] = [];
+  for (const file of files) {
+    if (file.size > MAX_SIZE) {
+      onError(`« ${file.name} » dépasse la taille de 10 Mo.`);
+      continue;
+    }
+    const ext = file.name.split(".").pop() || "bin";
+    const path = `chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage
+      .from("task-chat-attachments")
+      .upload(path, file, { contentType: file.type });
+    if (error) {
+      onError(explainError(error as { message?: string; statusCode?: string | number }, file.name));
+      continue;
+    }
+    const { data } = supabase.storage.from("task-chat-attachments").getPublicUrl(path);
+    out.push({ url: data.publicUrl, name: file.name, type: file.type, size: file.size });
+  }
+  return out;
+}
 
 function explainError(err: { message?: string; statusCode?: string | number } | null | undefined, name: string) {
   const msg = (err?.message || "").toLowerCase();
