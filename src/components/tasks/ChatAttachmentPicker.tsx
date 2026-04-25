@@ -85,33 +85,10 @@ export function ChatAttachmentPicker({ attachments, onChange, disabled }: ChatAt
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-
-    for (const f of files) {
-      if (f.size > MAX_SIZE) {
-        toast.error(`« ${f.name} » dépasse la taille de 10 Mo.`);
-        if (inputRef.current) inputRef.current.value = "";
-        return;
-      }
-    }
-
     setUploading(true);
-    const next: ChatAttachment[] = [...attachments];
     try {
-      for (const file of files) {
-        const ext = file.name.split(".").pop() || "bin";
-        const path = `chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage
-          .from("task-chat-attachments")
-          .upload(path, file, { contentType: file.type });
-        if (error) {
-          console.error("chat attachment upload error", error);
-          toast.error(explainError(error as any, file.name));
-          continue;
-        }
-        const { data } = supabase.storage.from("task-chat-attachments").getPublicUrl(path);
-        next.push({ url: data.publicUrl, name: file.name, type: file.type, size: file.size });
-      }
-      onChange(next);
+      const uploaded = await uploadChatFiles(files, (m) => toast.error(m));
+      if (uploaded.length > 0) onChange([...attachments, ...uploaded]);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
