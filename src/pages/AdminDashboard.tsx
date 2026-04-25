@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { sendNotification, notifyAdmins } from '@/lib/notifications';
 import { 
   Shield, 
   Users, 
@@ -215,6 +216,29 @@ const AdminDashboard = () => {
           .eq('id', selectedApproval.target_user_id);
 
         if (profileError) throw profileError;
+      }
+
+      // Notify the target user of the decision (best-effort)
+      if (selectedApproval) {
+        const targetName = `${selectedApproval.profiles.prenom} ${selectedApproval.profiles.nom}`;
+        await sendNotification({
+          user_id: selectedApproval.target_user_id,
+          sender_id: profile?.id ?? null,
+          type: 'approval_decision',
+          title: action === 'approve' ? 'Compte approuvé ✅' : 'Demande refusée',
+          body: action === 'approve'
+            ? `Votre compte a été activé. Bienvenue ${targetName} !`
+            : `Votre demande de création de compte a été refusée${comment ? ` : ${comment}` : '.'}`,
+          meta: { approval_id: approvalId, link: '/profil' },
+        });
+        // Trace the decision for other admins
+        await notifyAdmins({
+          sender_id: profile?.id ?? null,
+          type: 'admin_alert',
+          title: action === 'approve' ? 'Compte approuvé' : 'Demande refusée',
+          body: `${targetName} — décision prise par ${profile?.prenom ?? ''} ${profile?.nom ?? ''}`,
+          meta: { approval_id: approvalId, target_user_id: selectedApproval.target_user_id, link: '/admin' },
+        });
       }
 
       return { success: true };
