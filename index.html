@@ -2,11 +2,21 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <title>SIGC-CSN | Système Intégré de Gestion du Conseil Scientifique National</title>
     <meta name="description" content="Système Intégré de Gestion du Conseil (SIGC-CSN) - Plateforme de gestion intelligente pour la présence, le télétravail, les tâches et la performance" />
     <meta name="author" content="Conseil Scientifique National" />
+
+    <!-- PWA / Mobile install -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SIGC-CSN" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
     <meta property="og:title" content="SIGC-CSN | Système Intégré de Gestion du Conseil" />
     <meta property="og:description" content="Plateforme de gestion intelligente pour le Conseil Scientifique National" />
     <meta property="og:type" content="website" />
@@ -17,3 +27,4 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
