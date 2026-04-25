@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Send, Loader2, CheckCheck, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ChatAttachmentPicker, type ChatAttachment } from "./ChatAttachmentPicker";
+import { ChatAttachmentPicker, uploadChatFiles, type ChatAttachment } from "./ChatAttachmentPicker";
 import { ChatAttachmentList } from "./ChatAttachmentList";
 
 interface TaskChatProps {
@@ -24,6 +24,9 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [sending, setSending] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dropUploading, setDropUploading] = useState(false);
+  const dragCounter = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,8 +88,72 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
     );
   }
 
+  // Drag & drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!isParticipant) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer?.types?.includes("Files")) {
+      dragCounter.current += 1;
+      setIsDragging(true);
+    }
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDragging(false);
+    }
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!isParticipant) return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDragging(false);
+    if (!isParticipant) return;
+    const files = Array.from(e.dataTransfer?.files ?? []);
+    if (files.length === 0) return;
+    setDropUploading(true);
+    try {
+      const uploaded = await uploadChatFiles(files, (m) => toast.error(m));
+      if (uploaded.length > 0) setAttachments((prev) => [...prev, ...uploaded]);
+    } finally {
+      setDropUploading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-[400px] border border-border rounded-xl overflow-hidden bg-background">
+    <div
+      className="relative flex flex-col h-[400px] border border-border rounded-xl overflow-hidden bg-background"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      data-testid="task-chat-root"
+    >
+      {/* Drag overlay */}
+      {isParticipant && (isDragging || dropUploading) && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-xl pointer-events-none">
+          <div className="bg-background/95 px-4 py-3 rounded-lg shadow-md text-center">
+            {dropUploading ? (
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Envoi des fichiers…
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-primary">Déposez vos fichiers ici</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
