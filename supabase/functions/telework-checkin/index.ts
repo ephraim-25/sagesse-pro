@@ -164,7 +164,7 @@ serve(async (req) => {
 
       // Notify all admins about the blocked attempt (best-effort, fire & forget)
       try {
-        const { data: admins } = await supabaseAdmin
+        const { data: admins } = await supabase
           .from('user_roles')
           .select('user_id')
           .eq('role', 'admin');
@@ -177,7 +177,7 @@ serve(async (req) => {
             body: `${profile.prenom} ${profile.nom} a tenté un pointage avec un VPN/proxy détecté.`,
             meta: { target_user_id: profile.id, ip: clientIp, link: '/teletravail' },
           }));
-          await supabaseAdmin.from('notifications').insert(rows);
+          await supabase.from('notifications').insert(rows);
         }
       } catch (notifErr) {
         console.warn('Failed to notify admins:', notifErr);
