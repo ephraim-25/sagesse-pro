@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useNotifications } from "@/hooks/useNotifications";
+import { buildNotificationLink } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +16,12 @@ import { cn } from "@/lib/utils";
 
 const typeLabels: Record<string, string> = {
   approval_request: "Demande d'approbation",
+  approval_decision: "Décision d'approbation",
   force_checkout: "Déconnexion forcée",
   task_assigned: "Tâche assignée",
+  task_message: "Message tâche",
+  telework_blocked: "Télétravail bloqué",
+  admin_alert: "Alerte admin",
   info: "Information",
   warning: "Avertissement",
   success: "Succès",
@@ -23,8 +29,12 @@ const typeLabels: Record<string, string> = {
 
 const typeIcons: Record<string, string> = {
   approval_request: "📋",
+  approval_decision: "✅",
   force_checkout: "⏹️",
   task_assigned: "📝",
+  task_message: "💬",
+  telework_blocked: "🚫",
+  admin_alert: "🛡️",
   info: "ℹ️",
   warning: "⚠️",
   success: "✅",
