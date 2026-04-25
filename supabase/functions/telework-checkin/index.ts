@@ -161,6 +161,28 @@ serve(async (req) => {
     const ipCheck = await checkIp(clientIp);
     if (ipCheck.is_vpn || ipCheck.is_proxy) {
       console.log(`Checkin blocked (VPN/Proxy) for ${pseudonymizeId(profile.id)}`);
+
+      // Notify all admins about the blocked attempt (best-effort, fire & forget)
+      try {
+        const { data: admins } = await supabaseAdmin
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin');
+        if (admins?.length) {
+          const rows = admins.map((a: { user_id: string }) => ({
+            user_id: a.user_id,
+            sender_id: profile.id,
+            type: 'telework_blocked',
+            title: 'Pointage télétravail refusé (VPN/Proxy)',
+            body: `${profile.prenom} ${profile.nom} a tenté un pointage avec un VPN/proxy détecté.`,
+            meta: { target_user_id: profile.id, ip: clientIp, link: '/teletravail' },
+          }));
+          await supabaseAdmin.from('notifications').insert(rows);
+        }
+      } catch (notifErr) {
+        console.warn('Failed to notify admins:', notifErr);
+      }
+
       return new Response(JSON.stringify({
         error: "Pointage refusé : un VPN, proxy ou serveur d'hébergement a été détecté sur votre connexion. Désactivez-le et réessayez.",
         code: 'VPN_DETECTED',
