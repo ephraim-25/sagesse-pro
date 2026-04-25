@@ -190,7 +190,11 @@ export default function Notifications() {
                   "w-full text-left px-5 py-4 hover:bg-muted/50 transition-colors flex gap-4 items-start",
                   !notif.read && "bg-primary/5"
                 )}
-                onClick={() => { if (!notif.read) markAsRead(notif.id); }}
+                onClick={() => {
+                  if (!notif.read) markAsRead(notif.id);
+                  const link = buildNotificationLink({ type: notif.type, meta: notif.meta as never });
+                  if (link) navigate(link);
+                }}
               >
                 <span className="text-xl mt-0.5 shrink-0">
                   {typeIcons[notif.type || "info"] || "🔔"}
