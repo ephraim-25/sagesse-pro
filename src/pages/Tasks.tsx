@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,8 @@ const Tasks = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Tache | null>(null);
+  const [detailTab, setDetailTab] = useState<"info" | "chat" | "docs">("info");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [newTask, setNewTask] = useState({
     titre: '',
     description: '',
