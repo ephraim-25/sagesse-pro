@@ -12,14 +12,19 @@ import {
 } from "@/components/ui/popover";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { buildNotificationLink } from "@/lib/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const typeIcons: Record<string, string> = {
   approval_request: "📋",
+  approval_decision: "✅",
   force_checkout: "⏹️",
   task_assigned: "📝",
+  task_message: "💬",
+  telework_blocked: "🚫",
+  admin_alert: "🛡️",
   info: "ℹ️",
   warning: "⚠️",
   success: "✅",
@@ -114,6 +119,11 @@ export function NotificationCenter() {
                   )}
                   onClick={() => {
                     if (!notif.read) markAsRead(notif.id);
+                    const link = buildNotificationLink({ type: notif.type, meta: notif.meta as never });
+                    if (link) {
+                      setOpen(false);
+                      navigate(link);
+                    }
                   }}
                 >
                   <span className="text-lg mt-0.5 shrink-0">
