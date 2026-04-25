@@ -92,6 +92,20 @@ const Tasks = () => {
   const updateTask = useUpdateTache();
   const unreadCounts = useUnreadTaskMessages();
 
+  // Auto-open task dialog when navigating from a notification: /taches?task=<id>&tab=chat
+  useEffect(() => {
+    const taskParam = searchParams.get("task");
+    const tabParam = searchParams.get("tab");
+    if (!taskParam || !tasks?.length) return;
+    const found = tasks.find((t) => t.id === taskParam);
+    if (found) {
+      setSelectedTask(found);
+      if (tabParam === "chat" || tabParam === "docs" || tabParam === "info") {
+        setDetailTab(tabParam);
+      }
+    }
+  }, [searchParams, tasks]);
+
   // Check for overdue tasks
   const isOverdue = (task: Tache) => {
     if (!task.date_limite || task.statut === 'termine') return false;
@@ -453,7 +467,18 @@ const Tasks = () => {
         <TaskDetailDialog
           task={selectedTask}
           open={!!selectedTask}
-          onOpenChange={(open) => !open && setSelectedTask(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedTask(null);
+              setDetailTab("info");
+              if (searchParams.get("task")) {
+                searchParams.delete("task");
+                searchParams.delete("tab");
+                setSearchParams(searchParams, { replace: true });
+              }
+            }
+          }}
+          defaultTab={detailTab}
           unreadCount={selectedTask ? (unreadCounts[selectedTask.id] || 0) : 0}
         />
       </div>
