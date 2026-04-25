@@ -847,6 +847,12 @@ export type Database = {
           forced_checkout: boolean | null
           id: string
           ip_address: string | null
+          is_proxy: boolean | null
+          is_vpn: boolean | null
+          latitude: number | null
+          location_accuracy: number | null
+          longitude: number | null
+          network_check: Json | null
           updated_at: string | null
           user_id: string
         }
@@ -863,6 +869,12 @@ export type Database = {
           forced_checkout?: boolean | null
           id?: string
           ip_address?: string | null
+          is_proxy?: boolean | null
+          is_vpn?: boolean | null
+          latitude?: number | null
+          location_accuracy?: number | null
+          longitude?: number | null
+          network_check?: Json | null
           updated_at?: string | null
           user_id: string
         }
@@ -879,6 +891,12 @@ export type Database = {
           forced_checkout?: boolean | null
           id?: string
           ip_address?: string | null
+          is_proxy?: boolean | null
+          is_vpn?: boolean | null
+          latitude?: number | null
+          location_accuracy?: number | null
+          longitude?: number | null
+          network_check?: Json | null
           updated_at?: string | null
           user_id?: string
         }
