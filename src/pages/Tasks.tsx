@@ -196,14 +196,14 @@ const Tasks = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className={cn("grid w-full max-w-3xl", isManager ? "grid-cols-6" : "grid-cols-5")}>
-            <TabsTrigger value="all">Toutes ({taskCounts.all})</TabsTrigger>
-            <TabsTrigger value="a_faire">À faire ({taskCounts.a_faire})</TabsTrigger>
-            <TabsTrigger value="en_cours">En cours ({taskCounts.en_cours})</TabsTrigger>
-            <TabsTrigger value="termine">Terminées ({taskCounts.termine})</TabsTrigger>
-            <TabsTrigger value="overdue">En retard ({taskCounts.overdue})</TabsTrigger>
+          <TabsList className="flex w-full max-w-full overflow-x-auto sm:grid sm:max-w-3xl scrollbar-thin gap-1 h-auto p-1">
+            <TabsTrigger value="all" className="flex-shrink-0 min-h-[40px]">Toutes ({taskCounts.all})</TabsTrigger>
+            <TabsTrigger value="a_faire" className="flex-shrink-0 min-h-[40px]">À faire ({taskCounts.a_faire})</TabsTrigger>
+            <TabsTrigger value="en_cours" className="flex-shrink-0 min-h-[40px]">En cours ({taskCounts.en_cours})</TabsTrigger>
+            <TabsTrigger value="termine" className="flex-shrink-0 min-h-[40px]">Terminées ({taskCounts.termine})</TabsTrigger>
+            <TabsTrigger value="overdue" className="flex-shrink-0 min-h-[40px]">En retard ({taskCounts.overdue})</TabsTrigger>
             {isManager && (
-              <TabsTrigger value="assigned_by_me" className="relative">
+              <TabsTrigger value="assigned_by_me" className="relative flex-shrink-0 min-h-[40px]">
                 Assignées ({taskCounts.assigned_by_me})
                 {assignedByMeTasks.some(t => unreadCounts[t.id] > 0) && (
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
