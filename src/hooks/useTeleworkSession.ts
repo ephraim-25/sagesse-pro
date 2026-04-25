@@ -204,17 +204,54 @@ export function useTeleworkSession(): UseTeleworkSessionReturn {
     }
   };
 
+  const getPosition = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!('geolocation' in navigator)) {
+        reject(new Error("Votre appareil ne prend pas en charge la géolocalisation."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, (err) => {
+        const map: Record<number, string> = {
+          1: "Permission de géolocalisation refusée. Activez-la dans les paramètres du navigateur pour pointer.",
+          2: "Position indisponible. Vérifiez votre connexion / GPS.",
+          3: "Délai de géolocalisation dépassé. Réessayez à proximité d'une fenêtre.",
+        };
+        reject(new Error(map[err.code] || "Impossible d'obtenir votre position."));
+      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    });
+  };
+
   const checkin = useCallback(async (activity?: string) => {
     setIsLoading(true);
     try {
+      // 1) Mandatory GPS coordinates
+      toast({ title: 'Localisation…', description: 'Veuillez autoriser l\'accès à votre position.' });
+      const pos = await getPosition();
+
+      // 2) Call edge function with coords
       const { data, error } = await supabase.functions.invoke('telework-checkin', {
-        body: { activity }
+        body: {
+          activity,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        },
       });
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      // The Functions client wraps non-2xx into FunctionsHttpError; the body is in error.context
+      if (error) {
+        let serverMsg = error.message;
+        try {
+          const ctx = (error as unknown as { context?: Response }).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const parsed = await ctx.json();
+            if (parsed?.error) serverMsg = parsed.error;
+          }
+        } catch { /* ignore */ }
+        throw new Error(serverMsg);
+      }
+      if (data?.error) throw new Error(data.error);
 
-      // Reload session
       await loadActiveSession();
       lastHeartbeatRef.current = Date.now();
 
@@ -225,7 +262,7 @@ export function useTeleworkSession(): UseTeleworkSessionReturn {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erreur lors du check-in';
       toast({
-        title: 'Erreur',
+        title: 'Erreur de pointage',
         description: message,
         variant: 'destructive',
       });

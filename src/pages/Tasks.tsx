@@ -65,9 +65,10 @@ const statusConfig = {
 };
 
 const Tasks = () => {
-  const { isChefService, isAdmin, isPresident } = useAuth();
+  const { isChefService, isAdmin, isPresident, profile } = useAuth();
   const canCreateTasks = isChefService || isAdmin || isPresident;
-  
+  const isManager = isChefService || isAdmin || isPresident;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -103,11 +104,16 @@ const Tasks = () => {
     const matchesSearch = task.titre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.assigned_profile?.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
       task.assigned_profile?.prenom.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (activeTab === "all") return matchesSearch;
     if (activeTab === "overdue") return matchesSearch && isOverdue(task);
+    if (activeTab === "assigned_by_me") {
+      return matchesSearch && profile?.id && task.created_by === profile.id;
+    }
     return matchesSearch && task.statut === activeTab;
   }) || [];
+
+  const assignedByMeTasks = tasks?.filter(t => profile?.id && t.created_by === profile.id) || [];
 
   const taskCounts = {
     all: tasks?.length || 0,
@@ -115,6 +121,7 @@ const Tasks = () => {
     en_cours: tasks?.filter(t => t.statut === "en_cours").length || 0,
     termine: tasks?.filter(t => t.statut === "termine").length || 0,
     overdue: tasks?.filter(t => isOverdue(t)).length || 0,
+    assigned_by_me: assignedByMeTasks.length,
   };
 
   const handleCreateTask = async () => {
@@ -189,12 +196,20 @@ const Tasks = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
-            <TabsTrigger value="all">Toutes ({taskCounts.all})</TabsTrigger>
-            <TabsTrigger value="a_faire">À faire ({taskCounts.a_faire})</TabsTrigger>
-            <TabsTrigger value="en_cours">En cours ({taskCounts.en_cours})</TabsTrigger>
-            <TabsTrigger value="termine">Terminées ({taskCounts.termine})</TabsTrigger>
-            <TabsTrigger value="overdue">En retard ({taskCounts.overdue})</TabsTrigger>
+          <TabsList className="flex w-full max-w-full overflow-x-auto sm:grid sm:max-w-3xl scrollbar-thin gap-1 h-auto p-1">
+            <TabsTrigger value="all" className="flex-shrink-0 min-h-[40px]">Toutes ({taskCounts.all})</TabsTrigger>
+            <TabsTrigger value="a_faire" className="flex-shrink-0 min-h-[40px]">À faire ({taskCounts.a_faire})</TabsTrigger>
+            <TabsTrigger value="en_cours" className="flex-shrink-0 min-h-[40px]">En cours ({taskCounts.en_cours})</TabsTrigger>
+            <TabsTrigger value="termine" className="flex-shrink-0 min-h-[40px]">Terminées ({taskCounts.termine})</TabsTrigger>
+            <TabsTrigger value="overdue" className="flex-shrink-0 min-h-[40px]">En retard ({taskCounts.overdue})</TabsTrigger>
+            {isManager && (
+              <TabsTrigger value="assigned_by_me" className="relative flex-shrink-0 min-h-[40px]">
+                Assignées ({taskCounts.assigned_by_me})
+                {assignedByMeTasks.some(t => unreadCounts[t.id] > 0) && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">

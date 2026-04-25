@@ -10,10 +10,49 @@ const corsHeaders = {
 
 interface CheckinRequest {
   activity?: string;
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+}
+
+// Free, no-key needed. Returns proxy/hosting flags.
+// Docs: https://ipapi.co/api/#complete-location5
+async function checkIp(ip: string | null): Promise<{
+  ok: boolean;
+  is_vpn: boolean;
+  is_proxy: boolean;
+  country: string | null;
+  raw: Record<string, unknown> | null;
+  reason?: string;
+}> {
+  if (!ip) return { ok: true, is_vpn: false, is_proxy: false, country: null, raw: null };
+  try {
+    const r = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
+      headers: { 'User-Agent': 'sigc-csn-checkin/1.0' },
+    });
+    if (!r.ok) {
+      // Fail-open: don't block the user if the IP service is down.
+      return { ok: true, is_vpn: false, is_proxy: false, country: null, raw: null, reason: `lookup_status_${r.status}` };
+    }
+    const j = await r.json();
+    // ipapi.co exposes `proxy` as boolean for paid tiers; on free tier we use heuristic via `org`/`asn`.
+    const org = String(j.org || '').toLowerCase();
+    const knownVpn = ['vpn', 'proxy', 'hosting', 'datacenter', 'cloud', 'amazon', 'google llc', 'microsoft', 'digitalocean', 'ovh', 'hetzner', 'linode', 'vultr', 'choopa', 'leaseweb', 'm247'];
+    const flagged = knownVpn.some(k => org.includes(k));
+    const explicitProxy = j.proxy === true || j.hosting === true;
+    return {
+      ok: true,
+      is_vpn: explicitProxy || flagged,
+      is_proxy: explicitProxy || flagged,
+      country: j.country_name || j.country || null,
+      raw: { org: j.org, asn: j.asn, country: j.country, proxy: j.proxy, hosting: j.hosting },
+    };
+  } catch (e) {
+    return { ok: true, is_vpn: false, is_proxy: false, country: null, raw: null, reason: 'lookup_failed' };
+  }
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,7 +62,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Non autorisé' }), {
@@ -34,7 +72,7 @@ serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Token invalide' }), {
         status: 401,
@@ -42,14 +80,11 @@ serve(async (req) => {
       });
     }
 
-    // Rate limiting - use user ID as identifier
     const rateLimitResult = checkRateLimit(`checkin:${user.id}`, DEFAULT_RATE_LIMIT);
     if (!rateLimitResult.allowed) {
-      console.log(`Rate limit exceeded for checkin: user ${pseudonymizeId(user.id)}`);
       return rateLimitedResponse(rateLimitResult.resetIn, corsHeaders);
     }
 
-    // Get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, account_status, nom, prenom')
@@ -70,7 +105,6 @@ serve(async (req) => {
       });
     }
 
-    // Check for existing active session today
     const today = new Date().toISOString().split('T')[0];
     const { data: existingSession } = await supabase
       .from('telework_sessions')
@@ -81,20 +115,18 @@ serve(async (req) => {
       .single();
 
     if (existingSession) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'Session active déjà en cours',
-        session_id: existingSession.id 
+        session_id: existingSession.id,
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Parse request body with validation
     let body: CheckinRequest = {};
     try {
       const rawBody = await req.json();
-      // Validate input types
       if (rawBody.activity !== undefined && typeof rawBody.activity !== 'string') {
         return new Response(JSON.stringify({ error: 'Format activité invalide' }), {
           status: 400,
@@ -103,29 +135,50 @@ serve(async (req) => {
       }
       body = rawBody;
     } catch {
-      // Empty body is ok
+      // empty body is ok
     }
 
-    // Get device and country info from headers
+    // ---- Mandatory GPS coordinates ----
+    const lat = typeof body.latitude === 'number' ? body.latitude : NaN;
+    const lng = typeof body.longitude === 'number' ? body.longitude : NaN;
+    const acc = typeof body.accuracy === 'number' ? body.accuracy : null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return new Response(JSON.stringify({
+        error: "Géolocalisation requise. Veuillez autoriser l'accès à votre position pour démarrer la session.",
+        code: 'GEO_REQUIRED',
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ---- IP / VPN / Proxy check ----
     const userAgent = req.headers.get('user-agent') || 'Unknown';
     const forwardedFor = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip');
-    
-    // Determine country (simplified - in production use a geo-IP service)
-    let country = 'Unknown';
+    const clientIp = forwardedFor?.split(',')[0]?.trim() || null;
+
     const cfCountry = req.headers.get('cf-ipcountry');
-    if (cfCountry) {
-      country = cfCountry;
+    const ipCheck = await checkIp(clientIp);
+    if (ipCheck.is_vpn || ipCheck.is_proxy) {
+      console.log(`Checkin blocked (VPN/Proxy) for ${pseudonymizeId(profile.id)}`);
+      return new Response(JSON.stringify({
+        error: "Pointage refusé : un VPN, proxy ou serveur d'hébergement a été détecté sur votre connexion. Désactivez-le et réessayez.",
+        code: 'VPN_DETECTED',
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Create telework session with sanitized input
+    const country = ipCheck.country || cfCountry || 'Unknown';
+
     const sanitizedActivity = sanitizeActivity(body.activity, 200);
     const activities = sanitizedActivity ? [{
       timestamp: new Date().toISOString(),
       description: sanitizedActivity,
-      type: 'start'
+      type: 'start',
     }] : [];
 
-    // Sanitize device string
     const sanitizedDevice = userAgent.substring(0, 200).replace(/[<>]/g, '');
 
     const { data: session, error: sessionError } = await supabase
@@ -135,8 +188,14 @@ serve(async (req) => {
         current_status: 'connecte',
         country,
         device: sanitizedDevice,
-        ip_address: forwardedFor?.split(',')[0] || null,
-        activities
+        ip_address: clientIp,
+        activities,
+        latitude: lat,
+        longitude: lng,
+        location_accuracy: acc,
+        is_vpn: false,
+        is_proxy: false,
+        network_check: ipCheck.raw,
       })
       .select()
       .single();
@@ -149,14 +208,11 @@ serve(async (req) => {
       });
     }
 
-    // Log audit
     await supabase.rpc('log_audit_action', {
       p_action: 'telework_checkin',
       p_table_cible: 'telework_sessions',
-      p_nouvelle_valeur: { session_id: session.id, check_in: session.check_in }
+      p_nouvelle_valeur: { session_id: session.id, check_in: session.check_in, lat, lng },
     });
-
-    console.log(`Telework checkin: user ${pseudonymizeId(profile.id)} - Session ${pseudonymizeId(session.id)}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -164,14 +220,14 @@ serve(async (req) => {
         id: session.id,
         check_in: session.check_in,
         current_status: session.current_status,
-        country: session.country
-      }
+        country: session.country,
+      },
     }), {
       status: 200,
-      headers: { 
-        ...corsHeaders, 
+      headers: {
+        ...corsHeaders,
         'Content-Type': 'application/json',
-        ...rateLimitHeaders(rateLimitResult.remaining, rateLimitResult.resetIn, DEFAULT_RATE_LIMIT.maxRequests)
+        ...rateLimitHeaders(rateLimitResult.remaining, rateLimitResult.resetIn, DEFAULT_RATE_LIMIT.maxRequests),
       },
     });
 
