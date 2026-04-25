@@ -26,9 +26,10 @@ interface TaskDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   unreadCount?: number;
+  defaultTab?: "info" | "chat" | "docs";
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, unreadCount = 0 }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, unreadCount = 0, defaultTab = "info" }: TaskDetailDialogProps) {
   if (!task) return null;
 
   const priority = priorityConfig[task.priorite];
@@ -49,7 +50,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, unreadCount = 0 }: 
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="info" className="flex-1 flex flex-col min-h-0">
+        <Tabs key={defaultTab} defaultValue={defaultTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="info" className="gap-1.5">
               <Info className="w-3.5 h-3.5" />

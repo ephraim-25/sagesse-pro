@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useNotifications } from "@/hooks/useNotifications";
+import { buildNotificationLink } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +16,12 @@ import { cn } from "@/lib/utils";
 
 const typeLabels: Record<string, string> = {
   approval_request: "Demande d'approbation",
+  approval_decision: "Décision d'approbation",
   force_checkout: "Déconnexion forcée",
   task_assigned: "Tâche assignée",
+  task_message: "Message tâche",
+  telework_blocked: "Télétravail bloqué",
+  admin_alert: "Alerte admin",
   info: "Information",
   warning: "Avertissement",
   success: "Succès",
@@ -23,8 +29,12 @@ const typeLabels: Record<string, string> = {
 
 const typeIcons: Record<string, string> = {
   approval_request: "📋",
+  approval_decision: "✅",
   force_checkout: "⏹️",
   task_assigned: "📝",
+  task_message: "💬",
+  telework_blocked: "🚫",
+  admin_alert: "🛡️",
   info: "ℹ️",
   warning: "⚠️",
   success: "✅",
@@ -32,6 +42,7 @@ const typeIcons: Record<string, string> = {
 
 export default function Notifications() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [readFilter, setReadFilter] = useState<string>("all");
@@ -179,7 +190,11 @@ export default function Notifications() {
                   "w-full text-left px-5 py-4 hover:bg-muted/50 transition-colors flex gap-4 items-start",
                   !notif.read && "bg-primary/5"
                 )}
-                onClick={() => { if (!notif.read) markAsRead(notif.id); }}
+                onClick={() => {
+                  if (!notif.read) markAsRead(notif.id);
+                  const link = buildNotificationLink({ type: notif.type, meta: notif.meta as never });
+                  if (link) navigate(link);
+                }}
               >
                 <span className="text-xl mt-0.5 shrink-0">
                   {typeIcons[notif.type || "info"] || "🔔"}

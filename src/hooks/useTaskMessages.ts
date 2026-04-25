@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { sendNotification } from '@/lib/notifications';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface TaskMessageAttachment {
@@ -102,7 +103,39 @@ export function useTaskMessages(taskId: string | null) {
     });
 
     if (error) throw error;
-  }, [taskId, profile?.id]);
+
+    // Notify the other task participant (assignee or creator) – best-effort
+    try {
+      const { data: task } = await supabase
+        .from('taches')
+        .select('titre, assigned_to, created_by')
+        .eq('id', taskId)
+        .single();
+
+      if (task) {
+        const recipients = [task.assigned_to, task.created_by]
+          .filter((id): id is string => !!id && id !== profile.id);
+        const senderName = `${profile.prenom} ${profile.nom}`;
+        const preview = trimmed
+          ? trimmed.slice(0, 80)
+          : `📎 ${attachments.length} pièce(s) jointe(s)`;
+        await Promise.all(
+          [...new Set(recipients)].map((uid) =>
+            sendNotification({
+              user_id: uid,
+              sender_id: profile.id,
+              type: 'task_message',
+              title: `Nouveau message — ${task.titre}`,
+              body: `${senderName} : ${preview}`,
+              meta: { task_id: taskId },
+            })
+          )
+        );
+      }
+    } catch {
+      /* notification failures must not break the chat */
+    }
+  }, [taskId, profile?.id, profile?.prenom, profile?.nom]);
 
   // Broadcast typing indicator
   const sendTyping = useCallback(() => {

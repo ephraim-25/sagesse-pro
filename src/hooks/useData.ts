@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { sendNotification, notifyAdmins } from '@/lib/notifications';
 
 export interface DashboardData {
   overview: {
@@ -178,6 +179,28 @@ export const useCreateTache = () => {
         }
         throw error;
       }
+
+      // Fire notifications (best-effort, non-blocking)
+      const senderName = `${profile.prenom} ${profile.nom}`;
+      if (assignedTo && assignedTo !== profile.id) {
+        sendNotification({
+          user_id: assignedTo,
+          sender_id: profile.id,
+          type: 'task_assigned',
+          title: 'Nouvelle tâche assignée',
+          body: `${senderName} vous a assigné : « ${tache.titre} »`,
+          meta: { task_id: data.id },
+        });
+      }
+      // Admin alert for traceability
+      notifyAdmins({
+        sender_id: profile.id,
+        type: 'admin_alert',
+        title: 'Nouvelle tâche créée',
+        body: `${senderName} a créé la tâche « ${tache.titre} »`,
+        meta: { task_id: data.id },
+      });
+
       return data;
     },
     onSuccess: () => {

@@ -168,8 +168,31 @@ serve(async (req) => {
         title: 'Session télétravail terminée',
         body: `Votre session a été terminée par votre responsable.${sanitizedReason ? ' Raison: ' + sanitizedReason : ''}`,
         type: 'force_checkout',
-        meta: { session_id: session.id }
+        meta: { session_id: session.id, link: '/teletravail' }
       });
+
+    // Notify all admins for traceability of this critical action
+    try {
+      const { data: admins } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      if (admins?.length) {
+        const rows = admins
+          .filter((a: { user_id: string }) => a.user_id !== managerProfile.id)
+          .map((a: { user_id: string }) => ({
+            user_id: a.user_id,
+            sender_id: managerProfile.id,
+            type: 'admin_alert',
+            title: 'Force-checkout effectué',
+            body: `Une session télétravail a été forcée à se terminer.${sanitizedReason ? ' Raison: ' + sanitizedReason : ''}`,
+            meta: { session_id: session.id, target_user_id: session.user_id, link: '/teletravail' },
+          }));
+        if (rows.length) await supabase.from('notifications').insert(rows);
+      }
+    } catch (notifErr) {
+      console.warn('Failed to notify admins about force-checkout:', notifErr);
+    }
 
     // Log audit
     await supabase.rpc('log_audit_action', {
