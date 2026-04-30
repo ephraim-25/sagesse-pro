@@ -66,6 +66,7 @@ export function AppSidebar() {
   const agentPresenceItems = [
     { title: "Mon Pointage", url: "/checkin", icon: ClipboardCheck },
     { title: "Télétravail", url: "/teletravail", icon: Laptop },
+    { title: "Mes Congés", url: "/conges", icon: Calendar },
     { title: "Mon Historique", url: "/historique", icon: Calendar },
   ];
 
