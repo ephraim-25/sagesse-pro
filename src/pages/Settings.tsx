@@ -5,13 +5,13 @@ import {
   Settings as SettingsIcon,
   Building2,
   Bell,
-  Mail,
-  Globe,
   Database,
-  Save
+  Save,
+  CalendarDays
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HolidaysManager } from "@/components/settings/HolidaysManager";
 
 const Settings = () => {
   return (
@@ -24,12 +24,21 @@ const Settings = () => {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="general">Général</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="organization">Organisation</TabsTrigger>
+            <TabsTrigger value="calendar">
+              <CalendarDays className="w-4 h-4 mr-1" /> Calendrier
+            </TabsTrigger>
             <TabsTrigger value="system">Système</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="calendar">
+            <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
+              <HolidaysManager />
+            </div>
+          </TabsContent>
 
           <TabsContent value="general">
             <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
