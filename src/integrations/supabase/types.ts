@@ -280,6 +280,96 @@ export type Database = {
         }
         Relationships: []
       }
+      holidays: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          is_occasional: boolean
+          is_recurring: boolean
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          is_occasional?: boolean
+          is_recurring?: boolean
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          is_occasional?: boolean
+          is_recurring?: boolean
+          label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          admin_comment: string | null
+          admin_decided_at: string | null
+          admin_id: string | null
+          chef_comment: string | null
+          chef_decided_at: string | null
+          chef_id: string | null
+          created_at: string
+          end_date: string
+          id: string
+          reason: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["leave_status"]
+          updated_at: string
+          user_id: string
+          working_days: number
+        }
+        Insert: {
+          admin_comment?: string | null
+          admin_decided_at?: string | null
+          admin_id?: string | null
+          chef_comment?: string | null
+          chef_decided_at?: string | null
+          chef_id?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          reason?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["leave_status"]
+          updated_at?: string
+          user_id: string
+          working_days: number
+        }
+        Update: {
+          admin_comment?: string | null
+          admin_decided_at?: string | null
+          admin_id?: string | null
+          chef_comment?: string | null
+          chef_decided_at?: string | null
+          chef_id?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          reason?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["leave_status"]
+          updated_at?: string
+          user_id?: string
+          working_days?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -1027,6 +1117,10 @@ export type Database = {
         Args: { _auth_id: string; _target_user_id: string }
         Returns: boolean
       }
+      count_working_days: {
+        Args: { p_end: string; p_start: string }
+        Returns: number
+      }
       enroll_agent: { Args: { p_agent_id: string }; Returns: undefined }
       get_profile_id: { Args: { _auth_id: string }; Returns: string }
       get_user_grade_rank: { Args: { _user_id: string }; Returns: number }
@@ -1093,6 +1187,12 @@ export type Database = {
         | "aga_2"
         | "huissier"
         | "custom"
+      leave_status:
+        | "pending_chef"
+        | "pending_admin"
+        | "approved"
+        | "rejected"
+        | "cancelled"
       niveau_competence: "1" | "2" | "3" | "4" | "5"
       priorite_tache: "faible" | "moyen" | "eleve" | "urgente"
       statut_tache: "a_faire" | "en_cours" | "en_pause" | "termine"
@@ -1251,6 +1351,13 @@ export const Constants = {
         "aga_2",
         "huissier",
         "custom",
+      ],
+      leave_status: [
+        "pending_chef",
+        "pending_admin",
+        "approved",
+        "rejected",
+        "cancelled",
       ],
       niveau_competence: ["1", "2", "3", "4", "5"],
       priorite_tache: ["faible", "moyen", "eleve", "urgente"],
