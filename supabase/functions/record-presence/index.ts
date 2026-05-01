@@ -165,8 +165,24 @@ serve(async (req) => {
       );
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date().toISOString();
+    // Compute Kinshasa-local date (UTC+1, no DST)
+    const nowDate = new Date();
+    const kinshasaMs = nowDate.getTime() + 60 * 60 * 1000;
+    const kinshasaDate = new Date(kinshasaMs);
+    const today = kinshasaDate.toISOString().split('T')[0];
+    const now = nowDate.toISOString();
+
+    // Block weekends (Mon=1..Fri=5 only). getUTCDay on shifted date gives Kinshasa weekday.
+    const weekday = kinshasaDate.getUTCDay(); // 0=Sun, 6=Sat
+    if (weekday === 0 || weekday === 6) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Le pointage n'est pas autorisé les week-ends (samedi/dimanche). Le Conseil opère du lundi au vendredi.",
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Récupérer le profile_id
     const { data: profile, error: profileError } = await supabase
@@ -177,6 +193,44 @@ serve(async (req) => {
 
     if (profileError || !profile) {
       throw new Error('Profil non trouvé');
+    }
+
+    // Block active holidays (recurring MM-DD or specific date)
+    const mmdd = today.slice(5);
+    const { data: holidayHits } = await supabase
+      .from('holidays')
+      .select('id, label, date, is_recurring')
+      .eq('active', true);
+    const matchedHoliday = (holidayHits ?? []).find((h: { date: string; is_recurring: boolean }) =>
+      h.is_recurring ? h.date.slice(5) === mmdd : h.date === today
+    );
+    if (matchedHoliday) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Le pointage est désactivé : jour férié RDC actif (« ${(matchedHoliday as { label: string }).label} »).`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Block if agent has an approved leave covering today
+    const { data: leaveHit } = await supabase
+      .from('leave_requests')
+      .select('id, start_date, end_date')
+      .eq('user_id', profile.id)
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .maybeSingle();
+    if (leaveHit) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Vous êtes en congé approuvé du ${leaveHit.start_date} au ${leaveHit.end_date}. Pointage non autorisé pendant cette période.`,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Vérifier si une présence existe déjà pour aujourd'hui
