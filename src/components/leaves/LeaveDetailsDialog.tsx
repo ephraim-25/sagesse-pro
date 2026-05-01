@@ -185,6 +185,27 @@ export function LeaveDetailsDialog({ open, onOpenChange, leave }: Props) {
               ))}
             </ol>
           </div>
+
+          {/* Section Annulation (uniquement si annulée) */}
+          {leave.status === "cancelled" && (
+            <Alert variant="destructive">
+              <Ban className="w-4 h-4" />
+              <AlertTitle>Demande annulée</AlertTitle>
+              <AlertDescription className="space-y-1 mt-1">
+                <p>
+                  <strong>Annulée par :</strong> {userName(leave.user_id)} (agent demandeur)
+                </p>
+                <p>
+                  <strong>Date / heure :</strong>{" "}
+                  {format(new Date(leave.updated_at), "dd MMMM yyyy 'à' HH:mm", { locale: fr })}
+                </p>
+                <p className="flex items-center gap-1 text-xs">
+                  <BellRing className="w-3 h-3" />
+                  Notification temps réel envoyée au Chef de Bureau et à tous les administrateurs.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </DialogContent>
     </Dialog>
