@@ -51,24 +51,19 @@ export async function sendNotification(params: SendNotificationParams) {
 
 /**
  * Notify all admins about a critical platform event.
+ * Uses a SECURITY DEFINER RPC so any authenticated user (agents, chefs…)
+ * can deliver alerts to admins — total platform transparency.
  */
 export async function notifyAdmins(params: Omit<SendNotificationParams, "user_id">) {
-  const { data: admins, error } = await supabase
-    .from("user_roles")
-    .select("user_id")
-    .eq("role", "admin");
-
-  if (error || !admins?.length) return;
-
-  await Promise.all(
-    admins.map((a) =>
-      sendNotification({
-        ...params,
-        user_id: a.user_id,
-        type: params.type ?? "admin_alert",
-      })
-    )
-  );
+  const { error } = await supabase.rpc("notify_all_admins", {
+    p_title: params.title,
+    p_body: params.body ?? null,
+    p_type: params.type ?? "admin_alert",
+    p_meta: (params.meta ?? {}) as never,
+  });
+  if (error) {
+    console.warn("[notifications] notify_all_admins failed:", error.message);
+  }
 }
 
 /**
