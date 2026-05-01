@@ -122,21 +122,26 @@ Deno.test({
     const senders = new Set((rows ?? []).map((r) => r.sender_id));
     assertEquals(senders.size, 1, "all rows should share the same sender");
     assert(senders.has(agent.profileId), "sender should be the calling agent's profile id");
-  } finally {
-    await cleanup(
-      [admin1.profileId, admin2.profileId, agent.profileId],
-      [admin1.authId, admin2.authId, agent.authId],
-    );
-  }
+    } finally {
+      await cleanup(
+        [admin1.profileId, admin2.profileId, agent.profileId],
+        [admin1.authId, admin2.authId, agent.authId],
+      );
+    }
+  },
 });
 
-Deno.test("notify_all_admins: unauthenticated call is rejected", async () => {
-  const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
-  const { error } = await anon.rpc("notify_all_admins", {
-    p_title: "should-not-pass",
-    p_body: null,
-    p_type: "admin_alert",
-    p_meta: {},
-  });
-  assert(error, "anonymous call must fail (auth.uid() is null)");
+Deno.test({
+  name: "notify_all_admins: unauthenticated call is rejected",
+  ignore: !ENV_READY,
+  fn: async () => {
+    const anon = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
+    const { error } = await anon.rpc("notify_all_admins", {
+      p_title: "should-not-pass",
+      p_body: null,
+      p_type: "admin_alert",
+      p_meta: {},
+    });
+    assert(error, "anonymous call must fail (auth.uid() is null)");
+  },
 });
