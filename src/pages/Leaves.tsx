@@ -105,6 +105,27 @@ export default function Leaves() {
     );
   };
 
+  // Liste exhaustive des chevauchements (pour l'aperçu) + nombre de jours ouvrables en conflit
+  const overlapPreview = useMemo(() => {
+    if (!start || !end || new Date(end) < new Date(start)) {
+      return { conflicts: [] as Array<{ req: LeaveRequest; overlapDays: number; from: string; to: string }> };
+    }
+    const conflicts = mine
+      .filter((r) => r.status !== "rejected" && r.status !== "cancelled")
+      .filter((r) => r.start_date <= end && r.end_date >= start)
+      .map((r) => {
+        const from = r.start_date > start ? r.start_date : start;
+        const to = r.end_date < end ? r.end_date : end;
+        return {
+          req: r,
+          from,
+          to,
+          overlapDays: countWorkingDays(new Date(from), new Date(to), holidays),
+        };
+      });
+    return { conflicts };
+  }, [start, end, mine, holidays]);
+
   const handleSubmit = async () => {
     if (!profile || !start || !end) return;
     if (new Date(end) < new Date(start)) {
