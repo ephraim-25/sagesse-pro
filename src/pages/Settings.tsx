@@ -1,17 +1,30 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   Settings as SettingsIcon,
   Building2,
   Bell,
   Database,
   Save,
-  CalendarDays
+  CalendarDays,
+  Info,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HolidaysManager } from "@/components/settings/HolidaysManager";
+
+const PreviewBanner = () => (
+  <Alert className="mb-6">
+    <Info className="w-4 h-4" />
+    <AlertTitle>Aperçu — non persisté</AlertTitle>
+    <AlertDescription>
+      Cet onglet présente l'interface prévue mais n'est pas encore connecté à la base.
+      Pour une configuration active, utilisez l'onglet <strong>Calendrier</strong>.
+    </AlertDescription>
+  </Alert>
+);
 
 const Settings = () => {
   return (
