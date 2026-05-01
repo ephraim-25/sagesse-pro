@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Send, Check, X, Eye, FileDown } from "lucide-react";
+import { CalendarDays, Send, Check, X, Eye, FileDown, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useHolidays } from "@/hooks/useHolidays";
@@ -18,6 +18,7 @@ import { fr } from "date-fns/locale";
 import { LeaveCalendar } from "@/components/leaves/LeaveCalendar";
 import { LeaveDetailsDialog, type LeaveDetail } from "@/components/leaves/LeaveDetailsDialog";
 import { exportLeavesPdf } from "@/lib/leavesPdf";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type LeaveStatus = LeaveDetail["status"];
 type LeaveRequest = LeaveDetail;
@@ -103,6 +104,27 @@ export default function Leaves() {
         r.end_date >= s
     );
   };
+
+  // Liste exhaustive des chevauchements (pour l'aperçu) + nombre de jours ouvrables en conflit
+  const overlapPreview = useMemo(() => {
+    if (!start || !end || new Date(end) < new Date(start)) {
+      return { conflicts: [] as Array<{ req: LeaveRequest; overlapDays: number; from: string; to: string }> };
+    }
+    const conflicts = mine
+      .filter((r) => r.status !== "rejected" && r.status !== "cancelled")
+      .filter((r) => r.start_date <= end && r.end_date >= start)
+      .map((r) => {
+        const from = r.start_date > start ? r.start_date : start;
+        const to = r.end_date < end ? r.end_date : end;
+        return {
+          req: r,
+          from,
+          to,
+          overlapDays: countWorkingDays(new Date(from), new Date(to), holidays),
+        };
+      });
+    return { conflicts };
+  }, [start, end, mine, holidays]);
 
   const handleSubmit = async () => {
     if (!profile || !start || !end) return;
@@ -353,11 +375,44 @@ export default function Leaves() {
                       Jours ouvrables comptés (recalcul automatique) :{" "}
                       <strong>{workingDaysSelected}</strong> / 22
                     </div>
+
+                    {overlapPreview.conflicts.length > 0 && (
+                      <Alert variant="destructive">
+                        <AlertTriangle className="w-4 h-4" />
+                        <AlertTitle>Chevauchement détecté</AlertTitle>
+                        <AlertDescription className="mt-1 space-y-2">
+                          <p className="text-sm">
+                            La période sélectionnée chevauche {overlapPreview.conflicts.length} demande(s) existante(s).
+                            Veuillez choisir une autre période.
+                          </p>
+                          <ul className="text-sm space-y-1 list-disc pl-5">
+                            {overlapPreview.conflicts.map((c) => (
+                              <li key={c.req.id}>
+                                <strong>{statusMeta[c.req.status].label}</strong> —{" "}
+                                {format(new Date(c.req.start_date), "dd/MM/yyyy")} →{" "}
+                                {format(new Date(c.req.end_date), "dd/MM/yyyy")}
+                                <br />
+                                <span className="text-xs text-muted-foreground">
+                                  Conflit : {format(new Date(c.from), "dd/MM/yyyy")} → {format(new Date(c.to), "dd/MM/yyyy")}
+                                  {" · "}
+                                  {c.overlapDays} jour(s) ouvrable(s) en commun (fériés RDC actifs exclus)
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Motif (optionnel)</label>
                       <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Précisez le motif..." />
                     </div>
-                    <Button onClick={handleSubmit} disabled={submitting || !start || !end} className="w-full sm:w-auto">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={submitting || !start || !end || overlapPreview.conflicts.length > 0}
+                      className="w-full sm:w-auto"
+                    >
                       <Send className="w-4 h-4 mr-2" />
                       {submitting ? "Envoi..." : "Envoyer la demande"}
                     </Button>

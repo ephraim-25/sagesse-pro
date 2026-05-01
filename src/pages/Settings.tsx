@@ -1,17 +1,30 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   Settings as SettingsIcon,
   Building2,
   Bell,
   Database,
   Save,
-  CalendarDays
+  CalendarDays,
+  Info,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HolidaysManager } from "@/components/settings/HolidaysManager";
+
+const PreviewBanner = () => (
+  <Alert className="mb-6">
+    <Info className="w-4 h-4" />
+    <AlertTitle>Aperçu — non persisté</AlertTitle>
+    <AlertDescription>
+      Cet onglet présente l'interface prévue mais n'est pas encore connecté à la base.
+      Pour une configuration active, utilisez l'onglet <strong>Calendrier</strong>.
+    </AlertDescription>
+  </Alert>
+);
 
 const Settings = () => {
   return (
@@ -46,6 +59,7 @@ const Settings = () => {
                 <SettingsIcon className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-foreground">Paramètres Généraux</h3>
               </div>
+              <PreviewBanner />
               
               <div className="space-y-6 max-w-2xl">
                 <div className="space-y-2">
@@ -68,7 +82,7 @@ const Settings = () => {
                   <Input defaultValue="Français" />
                 </div>
 
-                <Button>
+                <Button disabled title="Aperçu non persisté">
                   <Save className="w-4 h-4 mr-2" />
                   Enregistrer
                 </Button>
@@ -82,6 +96,7 @@ const Settings = () => {
                 <Bell className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-foreground">Paramètres de Notifications</h3>
               </div>
+              <PreviewBanner />
               
               <div className="space-y-4 max-w-2xl">
                 <div className="flex items-center justify-between py-3 border-b border-border/50">
@@ -116,7 +131,7 @@ const Settings = () => {
                   <Switch defaultChecked />
                 </div>
 
-                <Button>
+                <Button disabled title="Aperçu non persisté">
                   <Save className="w-4 h-4 mr-2" />
                   Enregistrer
                 </Button>
@@ -130,6 +145,7 @@ const Settings = () => {
                 <Building2 className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-foreground">Structure Organisationnelle</h3>
               </div>
+              <PreviewBanner />
               
               <div className="space-y-6 max-w-2xl">
                 <div className="p-4 bg-muted/30 rounded-lg">
@@ -160,7 +176,7 @@ const Settings = () => {
                   <Input type="number" defaultValue="2" className="w-24" />
                 </div>
 
-                <Button>
+                <Button disabled title="Aperçu non persisté">
                   <Save className="w-4 h-4 mr-2" />
                   Enregistrer
                 </Button>
@@ -174,6 +190,7 @@ const Settings = () => {
                 <Database className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-foreground">Paramètres Système</h3>
               </div>
+              <PreviewBanner />
               
               <div className="space-y-6 max-w-2xl">
                 <div className="p-4 bg-success/5 rounded-lg border border-success/20">
