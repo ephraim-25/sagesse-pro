@@ -81,7 +81,10 @@ async function cleanup(profileIds: string[], authIds: string[]) {
   }
 }
 
-Deno.test("notify_all_admins: an agent's call notifies every admin", async () => {
+Deno.test({
+  name: "notify_all_admins: an agent's call notifies every admin",
+  ignore: !ENV_READY,
+  fn: async () => {
   const tag = Date.now().toString(36);
   const admin1 = await makeUser("admin", tag + "a1");
   const admin2 = await makeUser("admin", tag + "a2");
