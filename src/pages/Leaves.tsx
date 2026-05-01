@@ -18,6 +18,7 @@ import { fr } from "date-fns/locale";
 import { LeaveCalendar } from "@/components/leaves/LeaveCalendar";
 import { LeaveDetailsDialog, type LeaveDetail } from "@/components/leaves/LeaveDetailsDialog";
 import { exportLeavesPdf } from "@/lib/leavesPdf";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type LeaveStatus = LeaveDetail["status"];
 type LeaveRequest = LeaveDetail;
