@@ -72,6 +72,7 @@ const CheckIn = () => {
     new Date().toISOString().split('T')[0]
   );
   const recordPresence = useRecordPresence();
+  const eligibility = usePresenceEligibility();
   const [scannedMemberId, setScannedMemberId] = useState<string | null>(null);
   const { data: scannedProfile } = useProfile(scannedMemberId || '');
   const [, forceUpdate] = useState(0);
