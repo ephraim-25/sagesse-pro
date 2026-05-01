@@ -272,14 +272,6 @@ export default function Leaves() {
     }
   };
 
-  const cancelOwn = async (req: LeaveRequest) => {
-    const { error } = await supabase
-      .from("leave_requests")
-      .update({ status: "cancelled" })
-      .eq("id", req.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Demande annulée.");
-  };
 
   const handleExport = async () => {
     if (!exportStart || !exportEnd) return;
