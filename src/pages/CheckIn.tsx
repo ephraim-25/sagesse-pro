@@ -209,15 +209,24 @@ const CheckIn = () => {
                     )}
                   </div>
 
+                  {/* Eligibility (week-end / férié / congé) */}
+                  {!eligibility.eligible && !eligibility.loading && (
+                    <Alert variant="destructive" className="mb-4">
+                      <Ban className="w-4 h-4" />
+                      <AlertTitle>Pointage indisponible aujourd'hui</AlertTitle>
+                      <AlertDescription>{eligibility.reason}</AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* Time restriction messages */}
-                  {!isCheckedIn && !checkInRestriction.allowed && (
+                  {eligibility.eligible && !isCheckedIn && !checkInRestriction.allowed && (
                     <div className="mb-4 p-4 bg-warning/10 border border-warning/20 rounded-lg text-center">
                       <p className="text-sm text-warning font-medium">
                         {checkInRestriction.message}
                       </p>
                     </div>
                   )}
-                  {isCheckedIn && !checkOutRestriction.allowed && (
+                  {eligibility.eligible && isCheckedIn && !checkOutRestriction.allowed && (
                     <div className="mb-4 p-4 bg-warning/10 border border-warning/20 rounded-lg text-center">
                       <p className="text-sm text-warning font-medium">
                         {checkOutRestriction.message}
@@ -232,7 +241,7 @@ const CheckIn = () => {
                         variant="success" 
                         onClick={handleCheckIn} 
                         className="min-w-48"
-                        disabled={recordPresence.isPending || !checkInRestriction.allowed}
+                        disabled={recordPresence.isPending || !checkInRestriction.allowed || !eligibility.eligible}
                       >
                         {recordPresence.isPending ? (
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -247,7 +256,7 @@ const CheckIn = () => {
                         variant="destructive" 
                         onClick={handleCheckOut} 
                         className="min-w-48"
-                        disabled={recordPresence.isPending || !checkOutRestriction.allowed}
+                        disabled={recordPresence.isPending || !checkOutRestriction.allowed || !eligibility.eligible}
                       >
                         {recordPresence.isPending ? (
                           <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -262,7 +271,7 @@ const CheckIn = () => {
                   {/* Time schedule info */}
                   <div className="mt-6 pt-4 border-t border-border/50 text-center">
                     <p className="text-xs text-muted-foreground">
-                      Horaires de pointage (heure de Kinshasa) : Entrée jusqu'à 10h00 • Sortie à partir de 16h00
+                      Horaires (Kinshasa) : Entrée jusqu'à 10h00 • Sortie à partir de 16h00 • Lundi → vendredi, hors fériés RDC et congés approuvés.
                     </p>
                   </div>
                 </div>
