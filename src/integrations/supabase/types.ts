@@ -1153,6 +1153,15 @@ export type Database = {
         }
         Returns: string
       }
+      notify_all_admins: {
+        Args: {
+          p_body?: string
+          p_meta?: Json
+          p_title: string
+          p_type?: string
+        }
+        Returns: number
+      }
       set_user_grade_and_role: {
         Args: { p_grade_id: string; p_user_id: string }
         Returns: undefined

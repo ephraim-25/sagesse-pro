@@ -93,6 +93,17 @@ export default function Leaves() {
     }
   };
 
+  // Détecte un chevauchement avec les demandes actives (non rejetées/annulées) de l'agent
+  const overlapsWithExisting = (s: string, e: string) => {
+    return mine.find(
+      (r) =>
+        r.status !== "rejected" &&
+        r.status !== "cancelled" &&
+        r.start_date <= e &&
+        r.end_date >= s
+    );
+  };
+
   const handleSubmit = async () => {
     if (!profile || !start || !end) return;
     if (new Date(end) < new Date(start)) {
@@ -100,22 +111,33 @@ export default function Leaves() {
       return;
     }
     if (workingDaysSelected <= 0) {
-      toast.error("La période sélectionnée ne contient aucun jour ouvrable.");
+      toast.error("La période sélectionnée ne contient aucun jour ouvrable (week-ends et fériés RDC exclus).");
       return;
     }
     if (workingDaysSelected > 22) {
       toast.error("Le congé annuel est limité à 22 jours ouvrables (1 mois).");
       return;
     }
+    const conflict = overlapsWithExisting(start, end);
+    if (conflict) {
+      toast.error(
+        `Chevauchement détecté avec une demande existante (${format(new Date(conflict.start_date), "dd/MM/yyyy")} → ${format(new Date(conflict.end_date), "dd/MM/yyyy")}, ${statusMeta[conflict.status].label}). Veuillez choisir une autre période.`
+      );
+      return;
+    }
     setSubmitting(true);
-    const { error } = await supabase.from("leave_requests").insert({
-      user_id: profile.id,
-      start_date: start,
-      end_date: end,
-      working_days: workingDaysSelected,
-      reason: reason || null,
-      status: "pending_chef",
-    });
+    const { data: inserted, error } = await supabase
+      .from("leave_requests")
+      .insert({
+        user_id: profile.id,
+        start_date: start,
+        end_date: end,
+        working_days: workingDaysSelected,
+        reason: reason || null,
+        status: "pending_chef",
+      })
+      .select("id")
+      .single();
     setSubmitting(false);
     if (error) {
       toast.error("Erreur : " + error.message);
@@ -124,15 +146,55 @@ export default function Leaves() {
     toast.success("Demande envoyée à votre chef de bureau.");
     setStart(""); setEnd(""); setReason("");
 
+    const periodLabel = `du ${format(new Date(start), "dd/MM/yyyy")} au ${format(new Date(end), "dd/MM/yyyy")}`;
+
     if (profile.manager_id) {
       await sendNotification({
         user_id: profile.manager_id,
         title: "Nouvelle demande de congé",
-        body: `${profile.prenom} ${profile.nom} demande ${workingDaysSelected} jour(s) ouvrable(s) de congé.`,
+        body: `${profile.prenom} ${profile.nom} demande ${workingDaysSelected} jour(s) ouvrable(s) ${periodLabel}.`,
         type: "approval_request",
-        meta: { link: "/conges" },
+        meta: { link: "/conges", leave_id: inserted?.id },
       });
     }
+
+    // Notif systématique aux admins (transparence totale, tous bureaux/services)
+    await notifyAdmins({
+      title: "Nouvelle demande de congé soumise",
+      body: `${profile.prenom} ${profile.nom} — ${workingDaysSelected} jour(s) ouvrable(s) ${periodLabel}.`,
+      type: "admin_alert",
+      meta: { link: "/conges", leave_id: inserted?.id },
+    });
+  };
+
+  const cancelOwn = async (req: LeaveRequest) => {
+    if (!profile) return;
+    const { error } = await supabase
+      .from("leave_requests")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", req.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Demande annulée.");
+
+    const periodLabel = `du ${format(new Date(req.start_date), "dd/MM/yyyy")} au ${format(new Date(req.end_date), "dd/MM/yyyy")}`;
+
+    // Notif chef de bureau
+    if (profile.manager_id) {
+      await sendNotification({
+        user_id: profile.manager_id,
+        title: "Demande de congé annulée",
+        body: `${profile.prenom} ${profile.nom} a annulé sa demande ${periodLabel}.`,
+        type: "approval_decision",
+        meta: { link: "/conges", leave_id: req.id },
+      });
+    }
+    // Notif admins
+    await notifyAdmins({
+      title: "Demande de congé annulée",
+      body: `${profile.prenom} ${profile.nom} a annulé sa demande ${periodLabel}.`,
+      type: "admin_alert",
+      meta: { link: "/conges", leave_id: req.id },
+    });
   };
 
   const decideAsChef = async (req: LeaveRequest, approve: boolean, comment?: string) => {
@@ -161,15 +223,17 @@ export default function Leaves() {
       meta: { link: "/conges", leave_id: req.id },
     });
 
-    // Notif admins si approuvé par chef
-    if (approve) {
-      await notifyAdmins({
-        title: "Congé à valider (Administration)",
-        body: `Validation finale requise pour ${req.working_days} jour(s) ouvrable(s).`,
-        type: "approval_request",
-        meta: { link: "/conges", leave_id: req.id },
-      });
-    }
+    // Notif admins systématique (transparence totale)
+    await notifyAdmins({
+      title: approve
+        ? "Congé à valider (Administration)"
+        : "Congé rejeté par le Chef de Bureau",
+      body: approve
+        ? `Validation finale requise pour ${req.working_days} jour(s) ouvrable(s).`
+        : `Le chef a rejeté la demande${comment ? ` : « ${comment} »` : "."}`,
+      type: approve ? "approval_request" : "admin_alert",
+      meta: { link: "/conges", leave_id: req.id },
+    });
   };
 
   const decideAsAdmin = async (req: LeaveRequest, approve: boolean, comment?: string) => {
@@ -210,14 +274,6 @@ export default function Leaves() {
     }
   };
 
-  const cancelOwn = async (req: LeaveRequest) => {
-    const { error } = await supabase
-      .from("leave_requests")
-      .update({ status: "cancelled" })
-      .eq("id", req.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Demande annulée.");
-  };
 
   const handleExport = async () => {
     if (!exportStart || !exportEnd) return;
