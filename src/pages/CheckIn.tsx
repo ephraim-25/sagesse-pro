@@ -116,7 +116,12 @@ const CheckIn = () => {
 
   const handleQRScan = async (data: { memberId: string }) => {
     setScannedMemberId(data.memberId);
-    
+
+    if (!eligibility.eligible) {
+      toast.error(eligibility.reason || "Pointage indisponible aujourd'hui.");
+      return;
+    }
+
     // If scanning own QR code, trigger check-in/out
     if (data.memberId === profile?.id) {
       if (isCheckedIn) {
