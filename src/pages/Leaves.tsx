@@ -223,15 +223,17 @@ export default function Leaves() {
       meta: { link: "/conges", leave_id: req.id },
     });
 
-    // Notif admins si approuvé par chef
-    if (approve) {
-      await notifyAdmins({
-        title: "Congé à valider (Administration)",
-        body: `Validation finale requise pour ${req.working_days} jour(s) ouvrable(s).`,
-        type: "approval_request",
-        meta: { link: "/conges", leave_id: req.id },
-      });
-    }
+    // Notif admins systématique (transparence totale)
+    await notifyAdmins({
+      title: approve
+        ? "Congé à valider (Administration)"
+        : "Congé rejeté par le Chef de Bureau",
+      body: approve
+        ? `Validation finale requise pour ${req.working_days} jour(s) ouvrable(s).`
+        : `Le chef a rejeté la demande${comment ? ` : « ${comment} »` : "."}`,
+      type: approve ? "approval_request" : "admin_alert",
+      meta: { link: "/conges", leave_id: req.id },
+    });
   };
 
   const decideAsAdmin = async (req: LeaveRequest, approve: boolean, comment?: string) => {
