@@ -15,9 +15,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useTodayPresence, useRecordPresence, usePresences, useProfile } from "@/hooks/useData";
+import { usePresenceEligibility } from "@/hooks/usePresenceEligibility";
 import { MemberQRCode } from "@/components/qrcode/MemberQRCode";
 import { QRScanner } from "@/components/qrcode/QRScanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Ban } from "lucide-react";
 
 // Get current time in Kinshasa timezone (Africa/Kinshasa = UTC+1)
 function getKinshasaTime(): { hours: number; minutes: number } {
