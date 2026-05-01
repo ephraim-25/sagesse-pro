@@ -375,11 +375,44 @@ export default function Leaves() {
                       Jours ouvrables comptés (recalcul automatique) :{" "}
                       <strong>{workingDaysSelected}</strong> / 22
                     </div>
+
+                    {overlapPreview.conflicts.length > 0 && (
+                      <Alert variant="destructive">
+                        <AlertTriangle className="w-4 h-4" />
+                        <AlertTitle>Chevauchement détecté</AlertTitle>
+                        <AlertDescription className="mt-1 space-y-2">
+                          <p className="text-sm">
+                            La période sélectionnée chevauche {overlapPreview.conflicts.length} demande(s) existante(s).
+                            Veuillez choisir une autre période.
+                          </p>
+                          <ul className="text-sm space-y-1 list-disc pl-5">
+                            {overlapPreview.conflicts.map((c) => (
+                              <li key={c.req.id}>
+                                <strong>{statusMeta[c.req.status].label}</strong> —{" "}
+                                {format(new Date(c.req.start_date), "dd/MM/yyyy")} →{" "}
+                                {format(new Date(c.req.end_date), "dd/MM/yyyy")}
+                                <br />
+                                <span className="text-xs text-muted-foreground">
+                                  Conflit : {format(new Date(c.from), "dd/MM/yyyy")} → {format(new Date(c.to), "dd/MM/yyyy")}
+                                  {" · "}
+                                  {c.overlapDays} jour(s) ouvrable(s) en commun (fériés RDC actifs exclus)
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Motif (optionnel)</label>
                       <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Précisez le motif..." />
                     </div>
-                    <Button onClick={handleSubmit} disabled={submitting || !start || !end} className="w-full sm:w-auto">
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={submitting || !start || !end || overlapPreview.conflicts.length > 0}
+                      className="w-full sm:w-auto"
+                    >
                       <Send className="w-4 h-4 mr-2" />
                       {submitting ? "Envoi..." : "Envoyer la demande"}
                     </Button>
