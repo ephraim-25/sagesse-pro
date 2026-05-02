@@ -221,6 +221,23 @@ export function LeaveDetailsDialog({ open, onOpenChange, leave }: Props) {
                   <BellRing className="w-3 h-3" />
                   Notification temps réel envoyée au Chef de Bureau et à tous les administrateurs.
                 </p>
+                {auditId ? (
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-8"
+                  >
+                    <Link to={`/audit?id=${auditId}`}>
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Voir dans l'historique
+                    </Link>
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic mt-1">
+                    Lien d'audit disponible uniquement pour les administrateurs.
+                  </p>
+                )}
               </AlertDescription>
             </Alert>
           )}
