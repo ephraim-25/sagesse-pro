@@ -200,6 +200,24 @@ export default function Leaves() {
 
     const periodLabel = `du ${format(new Date(req.start_date), "dd/MM/yyyy")} au ${format(new Date(req.end_date), "dd/MM/yyyy")}`;
 
+    // Trace d'audit (visible dans /audit)
+    let auditId: string | null = null;
+    const { data: auditRpc } = await supabase.rpc("log_audit_action", {
+      p_action: "LEAVE_CANCELLED",
+      p_table_cible: "leave_requests",
+      p_ancienne_valeur: { status: req.status } as never,
+      p_nouvelle_valeur: {
+        leave_id: req.id,
+        cancelled_by: profile.id,
+        cancelled_by_name: `${profile.prenom} ${profile.nom}`,
+        start_date: req.start_date,
+        end_date: req.end_date,
+        working_days: req.working_days,
+        cancelled_at: new Date().toISOString(),
+      } as never,
+    });
+    if (typeof auditRpc === "string") auditId = auditRpc;
+
     // Notif chef de bureau
     if (profile.manager_id) {
       await sendNotification({
@@ -207,15 +225,19 @@ export default function Leaves() {
         title: "Demande de congé annulée",
         body: `${profile.prenom} ${profile.nom} a annulé sa demande ${periodLabel}.`,
         type: "approval_decision",
-        meta: { link: "/conges", leave_id: req.id },
+        meta: { link: "/conges", leave_id: req.id, audit_id: auditId },
       });
     }
-    // Notif admins
+    // Notif admins (avec lien vers l'audit)
     await notifyAdmins({
       title: "Demande de congé annulée",
       body: `${profile.prenom} ${profile.nom} a annulé sa demande ${periodLabel}.`,
       type: "admin_alert",
-      meta: { link: "/conges", leave_id: req.id },
+      meta: {
+        link: auditId ? `/audit?id=${auditId}` : "/conges",
+        leave_id: req.id,
+        audit_id: auditId,
+      },
     });
   };
 
