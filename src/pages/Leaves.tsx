@@ -447,9 +447,17 @@ export default function Leaves() {
                       startDate={start}
                       endDate={end}
                       onPickDate={handlePickDate}
+                      blockedRanges={mine
+                        .filter((r) => r.status !== "rejected" && r.status !== "cancelled")
+                        .map((r) => ({
+                          start: r.start_date,
+                          end: r.end_date,
+                          label: `Demande ${statusMeta[r.status].label}`,
+                        }))}
                     />
                     <p className="text-xs text-muted-foreground mt-2">
                       Cliquez sur une date pour définir le début, puis une seconde pour la fin.
+                      Les jours barrés (W = week-end, F = férié, C = congé existant) sont bloqués.
                     </p>
                   </div>
                 </div>
