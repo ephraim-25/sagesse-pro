@@ -6,19 +6,26 @@ import { isHoliday, isWeekend, type Holiday } from "@/lib/workingDays";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+export interface BlockedRange {
+  start: string; // ISO yyyy-mm-dd
+  end: string;
+  label?: string;
+}
+
 interface Props {
   holidays: Holiday[];
   startDate?: string;
   endDate?: string;
   onPickDate?: (iso: string) => void;
+  /** Plages déjà demandées (en attente / approuvées) pour visualiser les chevauchements. */
+  blockedRanges?: BlockedRange[];
 }
 
 /**
  * Mini calendrier mensuel : affiche jours ouvrés (lun-ven), week-ends (gris),
- * jours fériés actifs (rouge) et la sélection [start..end] (primary).
- * Cliquer sur un jour appelle onPickDate(iso).
+ * jours fériés actifs (rouge), plages déjà demandées (orange) et la sélection [start..end] (primary).
  */
-export function LeaveCalendar({ holidays, startDate, endDate, onPickDate }: Props) {
+export function LeaveCalendar({ holidays, startDate, endDate, onPickDate, blockedRanges = [] }: Props) {
   const [cursor, setCursor] = useState(() => {
     const d = startDate ? new Date(startDate) : new Date();
     d.setDate(1);
@@ -28,7 +35,6 @@ export function LeaveCalendar({ holidays, startDate, endDate, onPickDate }: Prop
   const days = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
     const last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
-    // ISO week starts Monday: 0=Sun..6=Sat → offset = (getDay()+6)%7
     const offset = (first.getDay() + 6) % 7;
     const cells: (Date | null)[] = [];
     for (let i = 0; i < offset; i++) cells.push(null);
@@ -60,6 +66,21 @@ export function LeaveCalendar({ holidays, startDate, endDate, onPickDate }: Prop
         ((h.is_recurring && h.date.slice(5) === mmdd) || (!h.is_recurring && h.date === iso))
     );
     return h?.label;
+  };
+
+  const matchingBlocked = (d: Date): BlockedRange | undefined => {
+    const iso = d.toISOString().slice(0, 10);
+    return blockedRanges.find((r) => r.start <= iso && r.end >= iso);
+  };
+
+  const getReasons = (d: Date): string[] => {
+    const reasons: string[] = [];
+    if (isWeekend(d)) reasons.push("Week-end");
+    const hl = holidayLabel(d);
+    if (hl) reasons.push(`Férié — ${hl}`);
+    const blk = matchingBlocked(d);
+    if (blk) reasons.push(blk.label ?? "Demande existante");
+    return reasons;
   };
 
   return (
@@ -99,24 +120,37 @@ export function LeaveCalendar({ holidays, startDate, endDate, onPickDate }: Prop
           if (!d) return <div key={i} />;
           const weekend = isWeekend(d);
           const holiday = isHoliday(d, holidays);
+          const blocked = matchingBlocked(d);
           const selected = inRange(d);
-          const label = holidayLabel(d);
+          const reasons = getReasons(d);
+          const tooltip = reasons.length > 0 ? reasons.join(" · ") : undefined;
+          const blockedSelectedConflict = selected && (weekend || holiday || blocked);
+
           return (
             <button
               type="button"
               key={i}
               onClick={() => onPickDate?.(d.toISOString().slice(0, 10))}
-              title={label ?? undefined}
+              title={tooltip}
+              aria-label={`${d.toISOString().slice(0, 10)}${tooltip ? ` (bloqué : ${tooltip})` : ""}`}
               className={cn(
-                "aspect-square rounded-md text-xs flex items-center justify-center transition-colors min-h-[36px]",
+                "aspect-square rounded-md text-xs flex items-center justify-center transition-colors min-h-[36px] relative",
                 "hover:ring-1 hover:ring-primary/40",
                 weekend && "bg-muted/40 text-muted-foreground",
                 holiday && "bg-destructive/15 text-destructive font-medium",
-                !weekend && !holiday && "bg-background",
-                selected && "ring-2 ring-primary bg-primary/10 text-foreground font-semibold"
+                blocked && !holiday && "bg-warning/20 text-warning-foreground line-through",
+                !weekend && !holiday && !blocked && "bg-background",
+                selected && "ring-2 ring-primary",
+                selected && !blockedSelectedConflict && "bg-primary/10 text-foreground font-semibold",
+                blockedSelectedConflict && "ring-destructive"
               )}
             >
               {d.getDate()}
+              {(weekend || holiday || blocked) && (
+                <span className="absolute bottom-0.5 right-1 text-[8px] leading-none">
+                  {holiday ? "F" : blocked ? "C" : "W"}
+                </span>
+              )}
             </button>
           );
         })}
@@ -124,8 +158,9 @@ export function LeaveCalendar({ holidays, startDate, endDate, onPickDate }: Prop
 
       <div className="flex flex-wrap gap-3 mt-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-background border border-border" /> Ouvré</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-muted/40" /> Week-end</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/15" /> Férié</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-muted/40" /> Week-end (W)</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/15" /> Férié (F)</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/20" /> Congé existant (C)</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded ring-2 ring-primary bg-primary/10" /> Sélection</span>
       </div>
     </div>
