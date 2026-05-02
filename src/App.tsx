@@ -31,6 +31,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Notifications from "./pages/Notifications";
 import Leaves from "./pages/Leaves";
+import Audit from "./pages/Audit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/conges" element={<ProtectedRoute><Leaves /></ProtectedRoute>} />
             <Route path="/profil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute requiredRole="admin"><Audit /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
