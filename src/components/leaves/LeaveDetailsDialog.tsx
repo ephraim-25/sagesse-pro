@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, Clock, XCircle, Send, Ban, User, Shield, BellRing } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, Send, Ban, User, Shield, BellRing, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -44,20 +46,36 @@ const statusLabel: Record<LeaveDetail["status"], string> = {
 
 export function LeaveDetailsDialog({ open, onOpenChange, leave }: Props) {
   const [profiles, setProfiles] = useState<Record<string, ProfileLite>>({});
+  const [auditId, setAuditId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!leave) return;
     const ids = [leave.user_id, leave.chef_id, leave.admin_id].filter(Boolean) as string[];
-    if (!ids.length) return;
-    supabase
-      .from("profiles")
-      .select("id, prenom, nom")
-      .in("id", ids)
-      .then(({ data }) => {
-        const map: Record<string, ProfileLite> = {};
-        (data ?? []).forEach((p) => { map[p.id] = p as ProfileLite; });
-        setProfiles(map);
-      });
+    if (ids.length) {
+      supabase
+        .from("profiles")
+        .select("id, prenom, nom")
+        .in("id", ids)
+        .then(({ data }) => {
+          const map: Record<string, ProfileLite> = {};
+          (data ?? []).forEach((p) => { map[p.id] = p as ProfileLite; });
+          setProfiles(map);
+        });
+    }
+    // Look up the audit_log entry for the cancellation (visible to admins).
+    if (leave.status === "cancelled") {
+      supabase
+        .from("audit_logs")
+        .select("id")
+        .eq("action", "LEAVE_CANCELLED")
+        .contains("nouvelle_valeur", { leave_id: leave.id } as never)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setAuditId((data as { id: string } | null)?.id ?? null));
+    } else {
+      setAuditId(null);
+    }
   }, [leave]);
 
   if (!leave) return null;
