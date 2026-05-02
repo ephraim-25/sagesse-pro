@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CompetencesEditor } from '@/components/profile/CompetencesEditor';
 
 const profileSchema = z.object({
   nom: z.string().min(2, 'Nom requis (minimum 2 caractères)'),
@@ -633,6 +634,9 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Compétences clés (visible par hiérarchie / Admin / Président) */}
+        <CompetencesEditor profileId={profile.id} />
       </div>
     </AppLayout>
   );
