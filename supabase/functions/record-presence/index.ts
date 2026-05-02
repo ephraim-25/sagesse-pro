@@ -174,11 +174,22 @@ serve(async (req) => {
 
     // Block weekends (Mon=1..Fri=5 only). getUTCDay on shifted date gives Kinshasa weekday.
     const weekday = kinshasaDate.getUTCDay(); // 0=Sun, 6=Sat
+    const weekdayName = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][weekday];
+    const debugBase = {
+      today,
+      weekday,
+      weekday_name: weekdayName,
+      timezone: 'Africa/Kinshasa (UTC+1)',
+      utc_now: nowDate.toISOString(),
+    };
+
     if (weekday === 0 || weekday === 6) {
       return new Response(
         JSON.stringify({
           success: false,
+          reason: 'weekend',
           error: "Le pointage n'est pas autorisé les week-ends (samedi/dimanche). Le Conseil opère du lundi au vendredi.",
+          debug: { ...debugBase, blocked_by: 'weekend' },
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -205,10 +216,17 @@ serve(async (req) => {
       h.is_recurring ? h.date.slice(5) === mmdd : h.date === today
     );
     if (matchedHoliday) {
+      const h = matchedHoliday as { id: string; label: string; date: string; is_recurring: boolean };
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Le pointage est désactivé : jour férié RDC actif (« ${(matchedHoliday as { label: string }).label} »).`,
+          reason: 'holiday',
+          error: `Le pointage est désactivé : jour férié RDC actif (« ${h.label} »).`,
+          debug: {
+            ...debugBase,
+            blocked_by: 'holiday',
+            holiday: { id: h.id, label: h.label, date: h.date, recurring: h.is_recurring },
+          },
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -227,7 +245,13 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
+          reason: 'leave',
           error: `Vous êtes en congé approuvé du ${leaveHit.start_date} au ${leaveHit.end_date}. Pointage non autorisé pendant cette période.`,
+          debug: {
+            ...debugBase,
+            blocked_by: 'approved_leave',
+            leave: leaveHit,
+          },
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
