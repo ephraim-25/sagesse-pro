@@ -127,15 +127,15 @@ export function LeaveCalendar({ holidays, startDate, endDate, onPickDate, blocke
           const tooltip = reasons.length > 0 ? reasons.join(" · ") : undefined;
           const blockedSelectedConflict = selected && (weekend || holiday || blocked);
 
-          return (
+          const isBlocked = weekend || holiday || !!blocked;
+          const dayCell = (
             <button
               type="button"
-              key={i}
               onClick={() => onPickDate?.(d.toISOString().slice(0, 10))}
               title={tooltip}
               aria-label={`${d.toISOString().slice(0, 10)}${tooltip ? ` (bloqué : ${tooltip})` : ""}`}
               className={cn(
-                "aspect-square rounded-md text-xs flex items-center justify-center transition-colors min-h-[36px] relative",
+                "w-full aspect-square rounded-md text-xs flex items-center justify-center transition-colors min-h-[36px] relative",
                 "hover:ring-1 hover:ring-primary/40",
                 weekend && "bg-muted/40 text-muted-foreground",
                 holiday && "bg-destructive/15 text-destructive font-medium",
@@ -153,6 +153,44 @@ export function LeaveCalendar({ holidays, startDate, endDate, onPickDate, blocke
                 </span>
               )}
             </button>
+          );
+
+          if (!isBlocked) {
+            return <div key={i}>{dayCell}</div>;
+          }
+
+          // Pour chaque jour bloqué : un bouton "Voir cause" via popover (mobile-friendly).
+          return (
+            <div key={i} className="relative">
+              {dayCell}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Voir cause du ${d.toISOString().slice(0, 10)}`}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-card border border-border shadow flex items-center justify-center hover:bg-accent"
+                  >
+                    <Info className="w-2.5 h-2.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 text-xs">
+                  <p className="font-semibold mb-1">
+                    {format(d, "EEEE dd MMMM yyyy", { locale: fr })}
+                  </p>
+                  {weekend && <p>• Week-end (samedi/dimanche)</p>}
+                  {holiday && <p>• Jour férié — {holidayLabel(d)}</p>}
+                  {blocked && (
+                    <p>
+                      • Demande existante {blocked.label ? `— ${blocked.label}` : ""}
+                      <br />
+                      <span className="text-muted-foreground">
+                        ({format(new Date(blocked.start), "dd/MM/yyyy")} → {format(new Date(blocked.end), "dd/MM/yyyy")})
+                      </span>
+                    </p>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
           );
         })}
       </div>
