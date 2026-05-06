@@ -1,11 +1,13 @@
-import { Search, User, LogOut, Settings, UserCircle } from "lucide-react";
+import { Search, User, LogOut, Settings, UserCircle, Shield } from "lucide-react";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { isSuperAdminEmail } from "@/lib/superAdmin";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +20,11 @@ import {
 export function AppHeader() {
   const { profile, grade, signOut, isAdmin, isPresident, hasRole } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = isSuperAdminEmail(profile?.email);
 
   // Determine user's display role - use grade label when available
   const getUserRoleLabel = () => {
+    if (isSuperAdmin) return "Super Administrateur";
     if (isAdmin) return "Administrateur";
     if (grade?.label) return grade.label;
     if (hasRole('president')) return "Président";
@@ -70,7 +74,14 @@ export function AppHeader() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden lg:block text-left">
-                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    {displayName}
+                    {isSuperAdmin && (
+                      <Badge className="ml-1 h-4 px-1 text-[10px] bg-primary text-primary-foreground">
+                        <Shield className="w-2.5 h-2.5 mr-0.5" /> Super Admin
+                      </Badge>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">{getUserRoleLabel()}</p>
                 </div>
               </Button>

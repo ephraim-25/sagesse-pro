@@ -8,32 +8,40 @@ import {
   Database,
   Save,
   CalendarDays,
-  Info,
+  Shield as ShieldIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { HolidaysManager } from "@/components/settings/HolidaysManager";
-
-const PreviewBanner = () => (
-  <Alert className="mb-6">
-    <Info className="w-4 h-4" />
-    <AlertTitle>Aperçu — non persisté</AlertTitle>
-    <AlertDescription>
-      Cet onglet présente l'interface prévue mais n'est pas encore connecté à la base.
-      Pour une configuration active, utilisez l'onglet <strong>Calendrier</strong>.
-    </AlertDescription>
-  </Alert>
-);
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { isSuperAdminEmail } from "@/lib/superAdmin";
+import { Badge } from "@/components/ui/badge";
 
 const Settings = () => {
+  const { settings, update, save } = useAppSettings();
+  const { isAdmin, profile } = useAuth();
+  const superAdmin = isSuperAdminEmail(profile?.email);
+
+  const handleSave = (label: string) => {
+    save();
+    toast.success(`${label} enregistrés.`);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="page-header">
-          <h1 className="page-title">Paramètres</h1>
-          <p className="page-description">Configurez les paramètres du système</p>
+        <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="page-title">Paramètres</h1>
+            <p className="page-description">Configurez les paramètres du système (sauvegarde locale).</p>
+          </div>
+          {superAdmin && (
+            <Badge className="bg-primary text-primary-foreground">
+              <ShieldIcon className="w-3 h-3 mr-1" /> Super Administrateur
+            </Badge>
+          )}
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
@@ -59,32 +67,39 @@ const Settings = () => {
                 <SettingsIcon className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-foreground">Paramètres Généraux</h3>
               </div>
-              <PreviewBanner />
-              
+
               <div className="space-y-6 max-w-2xl">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Nom de l'organisation</label>
-                  <Input defaultValue="Conseil Scientifique National" />
+                  <Input
+                    value={settings.organizationName}
+                    onChange={(e) => update("organizationName", e.target.value)}
+                  />
                 </div>
-                
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Email de contact</label>
-                  <Input defaultValue="contact@csn.gov" />
+                  <Input
+                    type="email"
+                    value={settings.contactEmail}
+                    onChange={(e) => update("contactEmail", e.target.value)}
+                  />
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Fuseau horaire</label>
-                  <Input defaultValue="Europe/Paris (UTC+1)" />
+                  <Input
+                    value={settings.timezone}
+                    onChange={(e) => update("timezone", e.target.value)}
+                  />
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Langue par défaut</label>
-                  <Input defaultValue="Français" />
+                  <Input
+                    value={settings.language}
+                    onChange={(e) => update("language", e.target.value)}
+                  />
                 </div>
-
-                <Button disabled title="Aperçu non persisté">
-                  <Save className="w-4 h-4 mr-2" />
-                  Enregistrer
+                <Button onClick={() => handleSave("Paramètres généraux")}>
+                  <Save className="w-4 h-4 mr-2" /> Enregistrer
                 </Button>
               </div>
             </div>
@@ -94,46 +109,23 @@ const Settings = () => {
             <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
               <div className="flex items-center gap-2 mb-6">
                 <Bell className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Paramètres de Notifications</h3>
+                <h3 className="font-semibold text-foreground">Notifications</h3>
               </div>
-              <PreviewBanner />
-              
               <div className="space-y-4 max-w-2xl">
-                <div className="flex items-center justify-between py-3 border-b border-border/50">
-                  <div>
-                    <p className="font-medium">Notifications par email</p>
-                    <p className="text-sm text-muted-foreground">Recevoir les alertes par email</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between py-3 border-b border-border/50">
-                  <div>
-                    <p className="font-medium">Rappels de tâches</p>
-                    <p className="text-sm text-muted-foreground">Notification avant les échéances</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between py-3 border-b border-border/50">
-                  <div>
-                    <p className="font-medium">Rapports hebdomadaires</p>
-                    <p className="text-sm text-muted-foreground">Résumé automatique chaque lundi</p>
-                  </div>
-                  <Switch />
-                </div>
-
-                <div className="flex items-center justify-between py-3 border-b border-border/50">
-                  <div>
-                    <p className="font-medium">Alertes de sécurité</p>
-                    <p className="text-sm text-muted-foreground">Notifications en cas d'activité suspecte</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <Button disabled title="Aperçu non persisté">
-                  <Save className="w-4 h-4 mr-2" />
-                  Enregistrer
+                <Row label="Notifications par email" desc="Recevoir les alertes par email"
+                  checked={settings.notifyEmail}
+                  onChange={(v) => update("notifyEmail", v)} />
+                <Row label="Rappels de tâches" desc="Notification avant les échéances"
+                  checked={settings.notifyTaskReminders}
+                  onChange={(v) => update("notifyTaskReminders", v)} />
+                <Row label="Rapports hebdomadaires" desc="Résumé automatique chaque lundi"
+                  checked={settings.notifyWeeklyReports}
+                  onChange={(v) => update("notifyWeeklyReports", v)} />
+                <Row label="Alertes de sécurité" desc="Notifications en cas d'activité suspecte"
+                  checked={settings.notifySecurityAlerts}
+                  onChange={(v) => update("notifySecurityAlerts", v)} />
+                <Button onClick={() => handleSave("Préférences de notifications")}>
+                  <Save className="w-4 h-4 mr-2" /> Enregistrer
                 </Button>
               </div>
             </div>
@@ -143,42 +135,29 @@ const Settings = () => {
             <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
               <div className="flex items-center gap-2 mb-6">
                 <Building2 className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Structure Organisationnelle</h3>
+                <h3 className="font-semibold text-foreground">Organisation</h3>
               </div>
-              <PreviewBanner />
-              
               <div className="space-y-6 max-w-2xl">
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <h4 className="font-medium mb-3">Départements</h4>
-                  <div className="space-y-2">
-                    {["Recherche", "Administration", "Communication", "Finance", "IT"].map((dept) => (
-                      <div key={dept} className="flex items-center justify-between py-2">
-                        <span>{dept}</span>
-                        <Button variant="ghost" size="sm">Modifier</Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    + Ajouter un département
-                  </Button>
-                </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Horaires de travail par défaut</label>
                   <div className="grid grid-cols-2 gap-4">
-                    <Input placeholder="Début" defaultValue="08:30" />
-                    <Input placeholder="Fin" defaultValue="17:30" />
+                    <Input type="time" value={settings.workStart} onChange={(e) => update("workStart", e.target.value)} />
+                    <Input type="time" value={settings.workEnd} onChange={(e) => update("workEnd", e.target.value)} />
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Jours de télétravail autorisés/semaine</label>
-                  <Input type="number" defaultValue="2" className="w-24" />
+                  <label className="text-sm font-medium">Jours de télétravail autorisés / semaine</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={settings.teleworkDaysPerWeek}
+                    onChange={(e) => update("teleworkDaysPerWeek", Number(e.target.value))}
+                    className="w-24"
+                  />
                 </div>
-
-                <Button disabled title="Aperçu non persisté">
-                  <Save className="w-4 h-4 mr-2" />
-                  Enregistrer
+                <Button onClick={() => handleSave("Paramètres d'organisation")}>
+                  <Save className="w-4 h-4 mr-2" /> Enregistrer
                 </Button>
               </div>
             </div>
@@ -188,56 +167,21 @@ const Settings = () => {
             <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
               <div className="flex items-center gap-2 mb-6">
                 <Database className="w-5 h-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Paramètres Système</h3>
+                <h3 className="font-semibold text-foreground">Système</h3>
               </div>
-              <PreviewBanner />
-              
               <div className="space-y-6 max-w-2xl">
-                <div className="p-4 bg-success/5 rounded-lg border border-success/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                    <span className="font-medium text-success">Système opérationnel</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Dernière vérification : il y a 5 minutes
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-border/50">
-                    <div>
-                      <p className="font-medium">Sauvegarde automatique</p>
-                      <p className="text-sm text-muted-foreground">Toutes les 24 heures</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between py-3 border-b border-border/50">
-                    <div>
-                      <p className="font-medium">Mode maintenance</p>
-                      <p className="text-sm text-muted-foreground">Désactiver l'accès utilisateur</p>
-                    </div>
-                    <Switch />
-                  </div>
-
-                  <div className="flex items-center justify-between py-3 border-b border-border/50">
-                    <div>
-                      <p className="font-medium">Logs détaillés</p>
-                      <p className="text-sm text-muted-foreground">Enregistrer toutes les actions</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </div>
-
-                <div className="pt-4 space-y-2">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Database className="w-4 h-4 mr-2" />
-                    Exporter les données
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive">
-                    Réinitialiser le système
-                  </Button>
-                </div>
+                <Row label="Sauvegarde automatique" desc="Toutes les 24 heures"
+                  checked={settings.autoBackup} onChange={(v) => update("autoBackup", v)} />
+                <Row label="Mode maintenance" desc="Désactiver l'accès utilisateur"
+                  checked={settings.maintenanceMode} onChange={(v) => update("maintenanceMode", v)} />
+                <Row label="Logs détaillés" desc="Enregistrer toutes les actions"
+                  checked={settings.detailedLogs} onChange={(v) => update("detailedLogs", v)} />
+                <Button onClick={() => handleSave("Paramètres système")} disabled={!isAdmin}>
+                  <Save className="w-4 h-4 mr-2" /> Enregistrer
+                </Button>
+                {!isAdmin && (
+                  <p className="text-xs text-muted-foreground">Réservé aux administrateurs.</p>
+                )}
               </div>
             </div>
           </TabsContent>
@@ -246,5 +190,19 @@ const Settings = () => {
     </AppLayout>
   );
 };
+
+function Row({ label, desc, checked, onChange }: {
+  label: string; desc: string; checked: boolean; onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-border/50 gap-4">
+      <div className="min-w-0">
+        <p className="font-medium text-sm">{label}</p>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
 
 export default Settings;
