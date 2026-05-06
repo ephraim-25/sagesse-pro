@@ -1,11 +1,13 @@
-import { Search, User, LogOut, Settings, UserCircle } from "lucide-react";
+import { Search, User, LogOut, Settings, UserCircle, Shield } from "lucide-react";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { isSuperAdminEmail } from "@/lib/superAdmin";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +20,11 @@ import {
 export function AppHeader() {
   const { profile, grade, signOut, isAdmin, isPresident, hasRole } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = isSuperAdminEmail(profile?.email);
 
   // Determine user's display role - use grade label when available
   const getUserRoleLabel = () => {
+    if (isSuperAdmin) return "Super Administrateur";
     if (isAdmin) return "Administrateur";
     if (grade?.label) return grade.label;
     if (hasRole('president')) return "Président";
