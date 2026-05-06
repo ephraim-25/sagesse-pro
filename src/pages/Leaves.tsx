@@ -239,6 +239,25 @@ export default function Leaves() {
         audit_id: auditId,
       },
     });
+
+    // Notif dédiée au(x) président(s) avec le même lien "Voir dans l'historique"
+    const { data: presidents } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "president");
+    for (const p of presidents ?? []) {
+      await sendNotification({
+        user_id: p.user_id,
+        title: "Annulation de congé",
+        body: `${profile.prenom} ${profile.nom} a annulé sa demande ${periodLabel}.`,
+        type: "admin_alert",
+        meta: {
+          link: auditId ? `/audit?id=${auditId}` : "/conges",
+          leave_id: req.id,
+          audit_id: auditId,
+        },
+      });
+    }
   };
 
   const decideAsChef = async (req: LeaveRequest, approve: boolean, comment?: string) => {
