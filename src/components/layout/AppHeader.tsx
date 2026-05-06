@@ -74,7 +74,14 @@ export function AppHeader() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden lg:block text-left">
-                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    {displayName}
+                    {isSuperAdmin && (
+                      <Badge className="ml-1 h-4 px-1 text-[10px] bg-primary text-primary-foreground">
+                        <Shield className="w-2.5 h-2.5 mr-0.5" /> Super Admin
+                      </Badge>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">{getUserRoleLabel()}</p>
                 </div>
               </Button>
