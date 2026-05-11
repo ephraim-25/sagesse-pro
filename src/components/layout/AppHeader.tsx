@@ -44,8 +44,8 @@ export function AppHeader() {
     ? `${profile.prenom?.[0] || ''}${profile.nom?.[0] || ''}`.toUpperCase()
     : "U";
 
-  // Only admin can access settings (strictest access)
-  const canAccessSettings = isAdmin;
+  // Only the super administrator can access settings
+  const canAccessSettings = isSuperAdmin;
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
