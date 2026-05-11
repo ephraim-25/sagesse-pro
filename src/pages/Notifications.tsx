@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckCheck, CalendarIcon, Search, BellOff, Filter, X } from "lucide-react";
+import { CheckCheck, CalendarIcon, Search, BellOff, Filter, X, ExternalLink, Check, Mail } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -41,8 +42,13 @@ const typeIcons: Record<string, string> = {
 };
 
 export default function Notifications() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, refetch } = useNotifications();
   const navigate = useNavigate();
+
+  const markAsUnread = async (id: string) => {
+    await supabase.from("notifications").update({ read: false, read_at: null }).eq("id", id);
+    refetch();
+  };
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [readFilter, setReadFilter] = useState<string>("all");
@@ -183,41 +189,67 @@ export default function Notifications() {
               {hasFilters && <p className="text-xs mt-1">Essayez de modifier vos filtres</p>}
             </div>
           ) : (
-            filtered.map(notif => (
-              <button
-                key={notif.id}
-                className={cn(
-                  "w-full text-left px-5 py-4 hover:bg-muted/50 transition-colors flex gap-4 items-start",
-                  !notif.read && "bg-primary/5"
-                )}
-                onClick={() => {
-                  if (!notif.read) markAsRead(notif.id);
-                  const link = buildNotificationLink({ type: notif.type, meta: notif.meta as never });
-                  if (link) navigate(link);
-                }}
-              >
-                <span className="text-xl mt-0.5 shrink-0">
-                  {typeIcons[notif.type || "info"] || "🔔"}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className={cn("text-sm", !notif.read && "font-semibold")}>{notif.title}</p>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className="text-[10px] font-normal">
-                        {typeLabels[notif.type || "info"] || notif.type || "info"}
-                      </Badge>
-                      {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />}
+            filtered.map(notif => {
+              const link = buildNotificationLink({ type: notif.type, meta: notif.meta as never });
+              const isCancellation =
+                notif.type === "leave_cancelled" ||
+                notif.type === "leave_cancelled_president" ||
+                notif.type === "leave_cancelled_admin";
+              return (
+                <div
+                  key={notif.id}
+                  className={cn(
+                    "px-5 py-4 flex gap-4 items-start",
+                    !notif.read && "bg-primary/5"
+                  )}
+                >
+                  <span className="text-xl mt-0.5 shrink-0">
+                    {typeIcons[notif.type || "info"] || "🔔"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className={cn("text-sm", !notif.read && "font-semibold")}>{notif.title}</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className="text-[10px] font-normal">
+                          {typeLabels[notif.type || "info"] || notif.type || "info"}
+                        </Badge>
+                        {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />}
+                      </div>
+                    </div>
+                    {notif.body && (
+                      <p className="text-xs text-muted-foreground mt-1">{notif.body}</p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground/60 mt-2">
+                      {notif.created_at ? format(new Date(notif.created_at), "dd MMMM yyyy 'à' HH:mm", { locale: fr }) : ""}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                      {notif.read ? (
+                        <Button variant="ghost" size="sm" onClick={() => markAsUnread(notif.id)}>
+                          <Mail className="w-3.5 h-3.5 mr-1" /> Marquer non lue
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => markAsRead(notif.id)}>
+                          <Check className="w-3.5 h-3.5 mr-1" /> Marquer lue
+                        </Button>
+                      )}
+                      {(isCancellation || link) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (!notif.read) markAsRead(notif.id);
+                            if (link) navigate(link);
+                          }}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                          {isCancellation ? "Voir dans l'historique" : "Ouvrir"}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  {notif.body && (
-                    <p className="text-xs text-muted-foreground mt-1">{notif.body}</p>
-                  )}
-                  <p className="text-[11px] text-muted-foreground/60 mt-2">
-                    {notif.created_at ? format(new Date(notif.created_at), "dd MMMM yyyy 'à' HH:mm", { locale: fr }) : ""}
-                  </p>
                 </div>
-              </button>
-            ))
+              );
+            })
           )}
         </div>
       </div>
