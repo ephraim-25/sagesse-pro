@@ -80,8 +80,14 @@ export default function Audit() {
       // Sécurité : la sélection de colonnes côté client est ALIGNÉE sur le rôle.
       // Le président ne demande JAMAIS les payloads bruts (RLS valide aussi côté serveur).
       const cols = fullPayloadAccess ? ADMIN_COLUMNS : PRESIDENT_COLUMNS;
-      const { data, error } = await supabase
-        .from("audit_logs")
+      const { data, error } = await (supabase
+        .from("audit_logs") as unknown as {
+          select: (c: string) => {
+            order: (c: string, o: { ascending: boolean }) => {
+              limit: (n: number) => Promise<{ data: unknown[] | null; error: unknown }>;
+            };
+          };
+        })
         .select(cols)
         .order("created_at", { ascending: false })
         .limit(1000);
@@ -89,15 +95,14 @@ export default function Audit() {
         toast.error("Accès refusé ou erreur de chargement.");
         setRows([]);
       } else {
-        // Normalise pour TypeScript : forcer la forme AuditRow (champs absents = undefined).
-        const safe = (data ?? []).map((r) => ({
-          id: (r as Record<string, unknown>).id as string,
-          action: (r as Record<string, unknown>).action as string,
-          table_cible: ((r as Record<string, unknown>).table_cible ?? null) as string | null,
-          created_at: (r as Record<string, unknown>).created_at as string,
-          user_id: ((r as Record<string, unknown>).user_id ?? null) as string | null,
-          nouvelle_valeur: fullPayloadAccess ? (r as Record<string, unknown>).nouvelle_valeur : null,
-          ancienne_valeur: fullPayloadAccess ? (r as Record<string, unknown>).ancienne_valeur : null,
+        const safe = ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+          id: r.id as string,
+          action: r.action as string,
+          table_cible: (r.table_cible ?? null) as string | null,
+          created_at: r.created_at as string,
+          user_id: (r.user_id ?? null) as string | null,
+          nouvelle_valeur: fullPayloadAccess ? r.nouvelle_valeur : null,
+          ancienne_valeur: fullPayloadAccess ? r.ancienne_valeur : null,
         }));
         setRows(safe);
         const ids = Array.from(new Set(safe.map((r) => r.user_id).filter(Boolean))) as string[];
