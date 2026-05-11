@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { isSuperAdminEmail } from '@/lib/superAdmin';
 
 interface Grade {
   id: string;
@@ -48,6 +49,7 @@ interface AuthContextType {
   hasRole: (role: string) => boolean;
   hasGrade: (gradeCode: string) => boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isPresident: boolean;
   isChefService: boolean;
   isChefBureau: boolean;
@@ -171,6 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Role-based checks
   const isAdmin = hasRole('admin');
+  const isSuperAdmin = isSuperAdminEmail(profile?.email);
   const isPresident = hasRole('president') || isAdmin;
   
   // Chef Service includes both chef_division and chef_bureau based on role OR grade
@@ -196,6 +199,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       hasRole,
       hasGrade,
       isAdmin,
+      isSuperAdmin,
       isPresident,
       isChefService,
       isChefBureau,
