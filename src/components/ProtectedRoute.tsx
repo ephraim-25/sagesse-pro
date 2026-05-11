@@ -7,10 +7,11 @@ interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: 'admin' | 'president' | 'chef_service' | 'agent';
   requiredGrade?: string;
+  requireSuperAdmin?: boolean;
 }
 
-const ProtectedRoute = ({ children, requiredRole, requiredGrade }: ProtectedRouteProps) => {
-  const { user, loading, hasRole, hasGrade, isAdmin, isChefService, profile } = useAuth();
+const ProtectedRoute = ({ children, requiredRole, requiredGrade, requireSuperAdmin }: ProtectedRouteProps) => {
+  const { user, loading, hasRole, hasGrade, isAdmin, isSuperAdmin, isChefService, profile } = useAuth();
 
   if (loading) {
     return (
@@ -32,7 +33,12 @@ const ProtectedRoute = ({ children, requiredRole, requiredGrade }: ProtectedRout
     return <Navigate to="/auth" replace />;
   }
 
-  // Admin bypasses all role/grade checks
+  // Super admin gate (strictest)
+  if (requireSuperAdmin && !isSuperAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Admin bypasses all role/grade checks (but NOT super-admin gate above)
   if (isAdmin) {
     return <>{children}</>;
   }
