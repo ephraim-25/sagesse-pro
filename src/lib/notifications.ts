@@ -86,7 +86,12 @@ export function buildNotificationLink(notif: {
     case "force_checkout":
     case "telework_blocked":
       return "/teletravail";
+    case "leave_cancelled":
+    case "leave_cancelled_president":
+    case "leave_cancelled_admin":
+      return meta.audit_log_id ? `/audit?id=${meta.audit_log_id}` : "/audit";
     case "admin_alert":
+      if (meta.audit_log_id) return `/audit?id=${meta.audit_log_id}`;
       return meta.task_id ? `/taches?task=${meta.task_id}` : "/admin";
     default:
       return null;

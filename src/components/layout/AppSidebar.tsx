@@ -34,10 +34,11 @@ import { Badge } from "@/components/ui/badge";
 import logoCsn from "@/assets/logo-csn.png";
 
 export function AppSidebar() {
-  const { isAdmin, isPresident, isChefService, hasRole, profile, grade } = useAuth();
+  const { isAdmin, isSuperAdmin, isPresident, isChefService, hasRole, profile, grade } = useAuth();
   
   // Determine user's primary role for display - use grade label when available
   const getUserRoleLabel = () => {
+    if (isSuperAdmin) return { label: "Super Administrateur", variant: "default" as const };
     if (isAdmin) return { label: "Administrateur", variant: "destructive" as const };
     if (grade?.label) return { label: grade.label, variant: hasRole('president') ? "default" as const : hasRole('chef_service') ? "secondary" as const : "outline" as const };
     if (hasRole('president')) return { label: "Président", variant: "default" as const };
@@ -46,8 +47,8 @@ export function AppSidebar() {
 
   const roleInfo = getUserRoleLabel();
 
-  // Check if user can access settings (only admin - strictest access)
-  const canAccessSettings = isAdmin;
+  // Settings & Security are reserved to the super administrator only
+  const canAccessSettings = isSuperAdmin;
 
   // Navigation items for agents (simple space)
   const agentNavItems = [
