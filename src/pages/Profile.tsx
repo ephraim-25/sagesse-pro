@@ -42,7 +42,6 @@ const profileSchema = z.object({
   postnom: z.string().optional(),
   telephone: z.string().optional(),
   fonction: z.string().optional(),
-  service: z.string().optional(),
   lieu_naissance: z.string().optional(),
   date_naissance: z.string().optional(),
   matricule: z.string().optional(),
@@ -50,9 +49,12 @@ const profileSchema = z.object({
   date_engagement: z.string().optional(),
   date_notification: z.string().optional(),
   date_octroi_matricule: z.string().optional(),
-  direction: z.string().optional(),
   double_affectation: z.string().optional(),
   fonction_double_affectation: z.string().optional(),
+  nom_direction: z.string().optional(),
+  nom_division: z.string().optional(),
+  nom_bureau: z.string().optional(),
+  superieur_id: z.string().optional(),
 });
 
 const NIVEAU_ETUDES = [
@@ -66,18 +68,31 @@ const NIVEAU_ETUDES = [
 
 const DOUBLE_AFFECTATIONS = ['Aucun', 'Revue', 'NTIC', 'Archivage'];
 
+type SuperieurOption = { id: string; nom: string; prenom: string; nom_direction?: string | null; nom_division?: string | null; nom_bureau?: string | null };
+
 const Profile = () => {
   const { profile, grade, refreshUserData, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  
+  const [superieurs, setSuperieurs] = useState<SuperieurOption[]>([]);
+  const [resolvedStructure, setResolvedStructure] = useState<{ bureau: string | null; division: string | null; direction: string | null }>({ bureau: null, division: null, direction: null });
+
+  const gradeCode = grade?.code as string | undefined;
+  const isDirecteur = gradeCode === 'directeur';
+  const isChefDivision = gradeCode === 'chef_division';
+  const isChefBureau = gradeCode === 'chef_bureau';
+  const isTopExec = gradeCode === 'president_conseil' || gradeCode === 'secretaire_permanent';
+  const isAgent = !!gradeCode && !isTopExec && !isDirecteur && !isChefDivision && !isChefBureau;
+
+  const superieurGradeCode: string | null = isChefDivision ? 'directeur' : isChefBureau ? 'chef_division' : isAgent ? 'chef_bureau' : null;
+  const superieurLabel = isChefDivision ? 'Votre Directeur' : isChefBureau ? 'Votre Chef de Division' : isAgent ? 'Votre Chef de Bureau' : '';
+
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
     postnom: '',
     telephone: '',
     fonction: '',
-    service: '',
     lieu_naissance: '',
     date_naissance: '',
     matricule: '',
@@ -85,9 +100,12 @@ const Profile = () => {
     date_engagement: '',
     date_notification: '',
     date_octroi_matricule: '',
-    direction: '',
     double_affectation: '',
     fonction_double_affectation: '',
+    nom_direction: '',
+    nom_division: '',
+    nom_bureau: '',
+    superieur_id: '',
   });
 
   useEffect(() => {
@@ -99,7 +117,6 @@ const Profile = () => {
         postnom: profile.postnom || '',
         telephone: profile.telephone || '',
         fonction: profile.fonction || '',
-        service: profile.service || '',
         lieu_naissance: p.lieu_naissance || '',
         date_naissance: p.date_naissance || '',
         matricule: p.matricule || '',
@@ -107,12 +124,54 @@ const Profile = () => {
         date_engagement: p.date_engagement || '',
         date_notification: p.date_notification || '',
         date_octroi_matricule: p.date_octroi_matricule || '',
-        direction: p.direction || '',
         double_affectation: p.double_affectation || '',
         fonction_double_affectation: p.fonction_double_affectation || '',
+        nom_direction: p.nom_direction || '',
+        nom_division: p.nom_division || '',
+        nom_bureau: p.nom_bureau || '',
+        superieur_id: p.superieur_id || '',
       });
     }
   }, [profile]);
+
+  // Charger la liste des supérieurs candidats selon le grade requis
+  useEffect(() => {
+    if (!superieurGradeCode) { setSuperieurs([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: gradeRow } = await supabase
+        .from('grades')
+        .select('id')
+        .eq('code', superieurGradeCode as any)
+        .maybeSingle();
+      if (!gradeRow?.id) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom, nom_direction, nom_division, nom_bureau')
+        .eq('grade_id', gradeRow.id)
+        .eq('statut', 'actif')
+        .order('nom');
+      if (!cancelled && !error && data) setSuperieurs(data as any);
+    })();
+    return () => { cancelled = true; };
+  }, [superieurGradeCode]);
+
+  // Résolution dynamique de la structure effective (héritage en cascade)
+  useEffect(() => {
+    if (!profile?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await (supabase as any).rpc('resolve_profile_structure', { p_profile_id: profile.id });
+      if (!cancelled && !error && Array.isArray(data) && data[0]) {
+        setResolvedStructure({
+          bureau: data[0].bureau ?? null,
+          division: data[0].division ?? null,
+          direction: data[0].direction ?? null,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.id, formData.superieur_id, formData.nom_bureau, formData.nom_division, formData.nom_direction]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -182,6 +241,24 @@ const Profile = () => {
       return;
     }
 
+    // Validation conditionnelle selon le grade (héritage hiérarchique strict)
+    if (isDirecteur && !formData.nom_direction?.trim()) {
+      toast.error('Le nom de votre Direction est obligatoire.');
+      return;
+    }
+    if (isChefDivision) {
+      if (!formData.nom_division?.trim()) { toast.error('Le nom de votre Division est obligatoire.'); return; }
+      if (!formData.superieur_id) { toast.error('Vous devez sélectionner votre Directeur.'); return; }
+    }
+    if (isChefBureau) {
+      if (!formData.nom_bureau?.trim()) { toast.error('Le nom de votre Bureau est obligatoire.'); return; }
+      if (!formData.superieur_id) { toast.error('Vous devez sélectionner votre Chef de Division.'); return; }
+    }
+    if (isAgent && !formData.superieur_id) {
+      toast.error('Vous devez sélectionner votre Chef de Bureau.');
+      return;
+    }
+
     setLoading(true);
     try {
       // Clean up empty date strings to null
@@ -198,6 +275,12 @@ const Profile = () => {
           cleanedData[key] = null;
         }
       });
+
+      // Ne permet aux chefs de remplir QUE le champ structure correspondant à leur grade
+      if (!isDirecteur) cleanedData.nom_direction = null;
+      if (!isChefDivision) cleanedData.nom_division = null;
+      if (!isChefBureau) cleanedData.nom_bureau = null;
+      if (isTopExec || isDirecteur) cleanedData.superieur_id = null;
 
       const { error } = await supabase
         .from('profiles')
@@ -314,16 +397,22 @@ const Profile = () => {
                     <span className="font-mono">{formData.matricule}</span>
                   </div>
                 )}
-                {formData.direction && (
+                {resolvedStructure.direction && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building2 className="w-4 h-4" />
-                    <span>{formData.direction}</span>
+                    <span>{resolvedStructure.direction}</span>
                   </div>
                 )}
-                {profile.service && (
+                {resolvedStructure.division && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Building2 className="w-4 h-4" />
+                    <span>Division : {resolvedStructure.division}</span>
+                  </div>
+                )}
+                {resolvedStructure.bureau && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <FileText className="w-4 h-4" />
-                    <span>{profile.service}</span>
+                    <span>Bureau : {resolvedStructure.bureau}</span>
                   </div>
                 )}
                 {profile.fonction && (
@@ -465,12 +554,13 @@ const Profile = () => {
 
                 <Separator />
 
-                {/* Contact & Affectation */}
+                {/* Contact & Affectation hiérarchique */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
-                    Contact & Affectation
+                    Contact & Affectation hiérarchique
                   </h4>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="telephone">Téléphone</Label>
@@ -483,27 +573,6 @@ const Profile = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="direction">Direction</Label>
-                      <Input
-                        id="direction"
-                        value={formData.direction}
-                        onChange={(e) => handleInputChange('direction', e.target.value)}
-                        placeholder="Ex: Direction Technique"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="service">Service / Bureau</Label>
-                      <Input
-                        id="service"
-                        value={formData.service}
-                        onChange={(e) => handleInputChange('service', e.target.value)}
-                        placeholder="Ex: Bureau Informatique"
-                      />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="fonction">Fonction</Label>
                       <Input
                         id="fonction"
@@ -513,6 +582,114 @@ const Profile = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Champ "nom de structure" conditionnel selon grade */}
+                  {isDirecteur && (
+                    <div className="space-y-2">
+                      <Label htmlFor="nom_direction">Nom de votre Direction *</Label>
+                      <Input
+                        id="nom_direction"
+                        value={formData.nom_direction}
+                        onChange={(e) => handleInputChange('nom_direction', e.target.value)}
+                        placeholder="Ex: Direction des Systèmes d'Information"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {isChefDivision && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nom_division">Nom de votre Division *</Label>
+                        <Input
+                          id="nom_division"
+                          value={formData.nom_division}
+                          onChange={(e) => handleInputChange('nom_division', e.target.value)}
+                          placeholder="Ex: Division Études et Développement"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                        <Select
+                          value={formData.superieur_id || ''}
+                          onValueChange={(v) => handleInputChange('superieur_id', v)}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Sélectionner votre Directeur" /></SelectTrigger>
+                          <SelectContent>
+                            {superieurs.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.prenom} {s.nom}{s.nom_direction ? ` — ${s.nom_direction}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {isChefBureau && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nom_bureau">Nom de votre Bureau *</Label>
+                        <Input
+                          id="nom_bureau"
+                          value={formData.nom_bureau}
+                          onChange={(e) => handleInputChange('nom_bureau', e.target.value)}
+                          placeholder="Ex: Bureau Développement Numérique"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                        <Select
+                          value={formData.superieur_id || ''}
+                          onValueChange={(v) => handleInputChange('superieur_id', v)}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Sélectionner votre Chef de Division" /></SelectTrigger>
+                          <SelectContent>
+                            {superieurs.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.prenom} {s.nom}{s.nom_division ? ` — ${s.nom_division}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {isAgent && (
+                    <div className="space-y-2">
+                      <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                      <Select
+                        value={formData.superieur_id || ''}
+                        onValueChange={(v) => handleInputChange('superieur_id', v)}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Sélectionner votre Chef de Bureau" /></SelectTrigger>
+                        <SelectContent>
+                          {superieurs.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.prenom} {s.nom}{s.nom_bureau ? ` — ${s.nom_bureau}` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Votre bureau, division et direction sont hérités automatiquement de votre Chef de Bureau.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Aperçu structure résolue (héritage en cascade) */}
+                  {(resolvedStructure.bureau || resolvedStructure.division || resolvedStructure.direction) && (
+                    <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                      <div className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Structure résolue (héritée)</div>
+                      {resolvedStructure.direction && <div>Direction : <span className="font-medium">{resolvedStructure.direction}</span></div>}
+                      {resolvedStructure.division && <div>Division : <span className="font-medium">{resolvedStructure.division}</span></div>}
+                      {resolvedStructure.bureau && <div>Bureau : <span className="font-medium">{resolvedStructure.bureau}</span></div>}
+                    </div>
+                  )}
                 </div>
 
                 <Separator />

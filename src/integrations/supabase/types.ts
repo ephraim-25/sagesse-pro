@@ -542,12 +542,16 @@ export type Database = {
           matricule: string | null
           niveau_etude: string | null
           nom: string
+          nom_bureau: string | null
+          nom_direction: string | null
+          nom_division: string | null
           photo_url: string | null
           postnom: string | null
           prenom: string
           secondary_bureau: string | null
           service: string | null
           statut: Database["public"]["Enums"]["statut_utilisateur"] | null
+          superieur_id: string | null
           team_id: string | null
           telephone: string | null
           updated_at: string | null
@@ -575,12 +579,16 @@ export type Database = {
           matricule?: string | null
           niveau_etude?: string | null
           nom: string
+          nom_bureau?: string | null
+          nom_direction?: string | null
+          nom_division?: string | null
           photo_url?: string | null
           postnom?: string | null
           prenom: string
           secondary_bureau?: string | null
           service?: string | null
           statut?: Database["public"]["Enums"]["statut_utilisateur"] | null
+          superieur_id?: string | null
           team_id?: string | null
           telephone?: string | null
           updated_at?: string | null
@@ -608,12 +616,16 @@ export type Database = {
           matricule?: string | null
           niveau_etude?: string | null
           nom?: string
+          nom_bureau?: string | null
+          nom_direction?: string | null
+          nom_division?: string | null
           photo_url?: string | null
           postnom?: string | null
           prenom?: string
           secondary_bureau?: string | null
           service?: string | null
           statut?: Database["public"]["Enums"]["statut_utilisateur"] | null
+          superieur_id?: string | null
           team_id?: string | null
           telephone?: string | null
           updated_at?: string | null
@@ -629,6 +641,13 @@ export type Database = {
           {
             foreignKeyName: "profiles_manager_id_fkey"
             columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_superieur_id_fkey"
+            columns: ["superieur_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1161,6 +1180,14 @@ export type Database = {
           p_type?: string
         }
         Returns: number
+      }
+      resolve_profile_structure: {
+        Args: { p_profile_id: string }
+        Returns: {
+          bureau: string
+          direction: string
+          division: string
+        }[]
       }
       set_user_grade_and_role: {
         Args: { p_grade_id: string; p_user_id: string }
