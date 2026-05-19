@@ -241,6 +241,24 @@ const Profile = () => {
       return;
     }
 
+    // Validation conditionnelle selon le grade (héritage hiérarchique strict)
+    if (isDirecteur && !formData.nom_direction?.trim()) {
+      toast.error('Le nom de votre Direction est obligatoire.');
+      return;
+    }
+    if (isChefDivision) {
+      if (!formData.nom_division?.trim()) { toast.error('Le nom de votre Division est obligatoire.'); return; }
+      if (!formData.superieur_id) { toast.error('Vous devez sélectionner votre Directeur.'); return; }
+    }
+    if (isChefBureau) {
+      if (!formData.nom_bureau?.trim()) { toast.error('Le nom de votre Bureau est obligatoire.'); return; }
+      if (!formData.superieur_id) { toast.error('Vous devez sélectionner votre Chef de Division.'); return; }
+    }
+    if (isAgent && !formData.superieur_id) {
+      toast.error('Vous devez sélectionner votre Chef de Bureau.');
+      return;
+    }
+
     setLoading(true);
     try {
       // Clean up empty date strings to null
