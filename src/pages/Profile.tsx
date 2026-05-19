@@ -373,16 +373,22 @@ const Profile = () => {
                     <span className="font-mono">{formData.matricule}</span>
                   </div>
                 )}
-                {formData.direction && (
+                {resolvedStructure.direction && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building2 className="w-4 h-4" />
-                    <span>{formData.direction}</span>
+                    <span>{resolvedStructure.direction}</span>
                   </div>
                 )}
-                {profile.service && (
+                {resolvedStructure.division && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Building2 className="w-4 h-4" />
+                    <span>Division : {resolvedStructure.division}</span>
+                  </div>
+                )}
+                {resolvedStructure.bureau && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <FileText className="w-4 h-4" />
-                    <span>{profile.service}</span>
+                    <span>Bureau : {resolvedStructure.bureau}</span>
                   </div>
                 )}
                 {profile.fonction && (
