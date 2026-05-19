@@ -276,6 +276,12 @@ const Profile = () => {
         }
       });
 
+      // Ne permet aux chefs de remplir QUE le champ structure correspondant à leur grade
+      if (!isDirecteur) cleanedData.nom_direction = null;
+      if (!isChefDivision) cleanedData.nom_division = null;
+      if (!isChefBureau) cleanedData.nom_bureau = null;
+      if (isTopExec || isDirecteur) cleanedData.superieur_id = null;
+
       const { error } = await supabase
         .from('profiles')
         .update(cleanedData as any)
