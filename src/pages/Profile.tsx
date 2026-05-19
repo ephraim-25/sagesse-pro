@@ -42,7 +42,6 @@ const profileSchema = z.object({
   postnom: z.string().optional(),
   telephone: z.string().optional(),
   fonction: z.string().optional(),
-  service: z.string().optional(),
   lieu_naissance: z.string().optional(),
   date_naissance: z.string().optional(),
   matricule: z.string().optional(),
@@ -50,9 +49,12 @@ const profileSchema = z.object({
   date_engagement: z.string().optional(),
   date_notification: z.string().optional(),
   date_octroi_matricule: z.string().optional(),
-  direction: z.string().optional(),
   double_affectation: z.string().optional(),
   fonction_double_affectation: z.string().optional(),
+  nom_direction: z.string().optional(),
+  nom_division: z.string().optional(),
+  nom_bureau: z.string().optional(),
+  superieur_id: z.string().optional(),
 });
 
 const NIVEAU_ETUDES = [
@@ -66,18 +68,31 @@ const NIVEAU_ETUDES = [
 
 const DOUBLE_AFFECTATIONS = ['Aucun', 'Revue', 'NTIC', 'Archivage'];
 
+type SuperieurOption = { id: string; nom: string; prenom: string; nom_direction?: string | null; nom_division?: string | null; nom_bureau?: string | null };
+
 const Profile = () => {
   const { profile, grade, refreshUserData, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  
+  const [superieurs, setSuperieurs] = useState<SuperieurOption[]>([]);
+  const [resolvedStructure, setResolvedStructure] = useState<{ bureau: string | null; division: string | null; direction: string | null }>({ bureau: null, division: null, direction: null });
+
+  const gradeCode = grade?.code as string | undefined;
+  const isDirecteur = gradeCode === 'directeur';
+  const isChefDivision = gradeCode === 'chef_division';
+  const isChefBureau = gradeCode === 'chef_bureau';
+  const isTopExec = gradeCode === 'president_conseil' || gradeCode === 'secretaire_permanent';
+  const isAgent = !!gradeCode && !isTopExec && !isDirecteur && !isChefDivision && !isChefBureau;
+
+  const superieurGradeCode: string | null = isChefDivision ? 'directeur' : isChefBureau ? 'chef_division' : isAgent ? 'chef_bureau' : null;
+  const superieurLabel = isChefDivision ? 'Votre Directeur' : isChefBureau ? 'Votre Chef de Division' : isAgent ? 'Votre Chef de Bureau' : '';
+
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
     postnom: '',
     telephone: '',
     fonction: '',
-    service: '',
     lieu_naissance: '',
     date_naissance: '',
     matricule: '',
@@ -85,9 +100,12 @@ const Profile = () => {
     date_engagement: '',
     date_notification: '',
     date_octroi_matricule: '',
-    direction: '',
     double_affectation: '',
     fonction_double_affectation: '',
+    nom_direction: '',
+    nom_division: '',
+    nom_bureau: '',
+    superieur_id: '',
   });
 
   useEffect(() => {
@@ -99,7 +117,6 @@ const Profile = () => {
         postnom: profile.postnom || '',
         telephone: profile.telephone || '',
         fonction: profile.fonction || '',
-        service: profile.service || '',
         lieu_naissance: p.lieu_naissance || '',
         date_naissance: p.date_naissance || '',
         matricule: p.matricule || '',
@@ -107,12 +124,54 @@ const Profile = () => {
         date_engagement: p.date_engagement || '',
         date_notification: p.date_notification || '',
         date_octroi_matricule: p.date_octroi_matricule || '',
-        direction: p.direction || '',
         double_affectation: p.double_affectation || '',
         fonction_double_affectation: p.fonction_double_affectation || '',
+        nom_direction: p.nom_direction || '',
+        nom_division: p.nom_division || '',
+        nom_bureau: p.nom_bureau || '',
+        superieur_id: p.superieur_id || '',
       });
     }
   }, [profile]);
+
+  // Charger la liste des supérieurs candidats selon le grade requis
+  useEffect(() => {
+    if (!superieurGradeCode) { setSuperieurs([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: gradeRow } = await supabase
+        .from('grades')
+        .select('id')
+        .eq('code', superieurGradeCode as any)
+        .maybeSingle();
+      if (!gradeRow?.id) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom, nom_direction, nom_division, nom_bureau')
+        .eq('grade_id', gradeRow.id)
+        .eq('statut', 'actif')
+        .order('nom');
+      if (!cancelled && !error && data) setSuperieurs(data as any);
+    })();
+    return () => { cancelled = true; };
+  }, [superieurGradeCode]);
+
+  // Résolution dynamique de la structure effective (héritage en cascade)
+  useEffect(() => {
+    if (!profile?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await (supabase as any).rpc('resolve_profile_structure', { p_profile_id: profile.id });
+      if (!cancelled && !error && Array.isArray(data) && data[0]) {
+        setResolvedStructure({
+          bureau: data[0].bureau ?? null,
+          division: data[0].division ?? null,
+          direction: data[0].direction ?? null,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.id, formData.superieur_id, formData.nom_bureau, formData.nom_division, formData.nom_direction]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
