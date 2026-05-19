@@ -530,12 +530,13 @@ const Profile = () => {
 
                 <Separator />
 
-                {/* Contact & Affectation */}
+                {/* Contact & Affectation hiérarchique */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
-                    Contact & Affectation
+                    Contact & Affectation hiérarchique
                   </h4>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="telephone">Téléphone</Label>
@@ -548,27 +549,6 @@ const Profile = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="direction">Direction</Label>
-                      <Input
-                        id="direction"
-                        value={formData.direction}
-                        onChange={(e) => handleInputChange('direction', e.target.value)}
-                        placeholder="Ex: Direction Technique"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="service">Service / Bureau</Label>
-                      <Input
-                        id="service"
-                        value={formData.service}
-                        onChange={(e) => handleInputChange('service', e.target.value)}
-                        placeholder="Ex: Bureau Informatique"
-                      />
-                    </div>
-                    <div className="space-y-2">
                       <Label htmlFor="fonction">Fonction</Label>
                       <Input
                         id="fonction"
@@ -578,6 +558,114 @@ const Profile = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Champ "nom de structure" conditionnel selon grade */}
+                  {isDirecteur && (
+                    <div className="space-y-2">
+                      <Label htmlFor="nom_direction">Nom de votre Direction *</Label>
+                      <Input
+                        id="nom_direction"
+                        value={formData.nom_direction}
+                        onChange={(e) => handleInputChange('nom_direction', e.target.value)}
+                        placeholder="Ex: Direction des Systèmes d'Information"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {isChefDivision && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nom_division">Nom de votre Division *</Label>
+                        <Input
+                          id="nom_division"
+                          value={formData.nom_division}
+                          onChange={(e) => handleInputChange('nom_division', e.target.value)}
+                          placeholder="Ex: Division Études et Développement"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                        <Select
+                          value={formData.superieur_id || ''}
+                          onValueChange={(v) => handleInputChange('superieur_id', v)}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Sélectionner votre Directeur" /></SelectTrigger>
+                          <SelectContent>
+                            {superieurs.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.prenom} {s.nom}{s.nom_direction ? ` — ${s.nom_direction}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {isChefBureau && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nom_bureau">Nom de votre Bureau *</Label>
+                        <Input
+                          id="nom_bureau"
+                          value={formData.nom_bureau}
+                          onChange={(e) => handleInputChange('nom_bureau', e.target.value)}
+                          placeholder="Ex: Bureau Développement Numérique"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                        <Select
+                          value={formData.superieur_id || ''}
+                          onValueChange={(v) => handleInputChange('superieur_id', v)}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Sélectionner votre Chef de Division" /></SelectTrigger>
+                          <SelectContent>
+                            {superieurs.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.prenom} {s.nom}{s.nom_division ? ` — ${s.nom_division}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {isAgent && (
+                    <div className="space-y-2">
+                      <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                      <Select
+                        value={formData.superieur_id || ''}
+                        onValueChange={(v) => handleInputChange('superieur_id', v)}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Sélectionner votre Chef de Bureau" /></SelectTrigger>
+                        <SelectContent>
+                          {superieurs.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.prenom} {s.nom}{s.nom_bureau ? ` — ${s.nom_bureau}` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Votre bureau, division et direction sont hérités automatiquement de votre Chef de Bureau.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Aperçu structure résolue (héritage en cascade) */}
+                  {(resolvedStructure.bureau || resolvedStructure.division || resolvedStructure.direction) && (
+                    <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                      <div className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Structure résolue (héritée)</div>
+                      {resolvedStructure.direction && <div>Direction : <span className="font-medium">{resolvedStructure.direction}</span></div>}
+                      {resolvedStructure.division && <div>Division : <span className="font-medium">{resolvedStructure.division}</span></div>}
+                      {resolvedStructure.bureau && <div>Bureau : <span className="font-medium">{resolvedStructure.bureau}</span></div>}
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
