@@ -9,6 +9,8 @@ import {
   Save,
   CalendarDays,
   Shield as ShieldIcon,
+  Power,
+  AlertTriangle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,11 +20,40 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { isSuperAdminEmail } from "@/lib/superAdmin";
 import { Badge } from "@/components/ui/badge";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 const Settings = () => {
   const { settings, update, save } = useAppSettings();
   const { isAdmin, profile } = useAuth();
   const superAdmin = isSuperAdminEmail(profile?.email);
+  const { maintenance_mode, updated_at, setMaintenance } = useMaintenanceMode();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const toggleMaintenance = async (next: boolean) => {
+    try {
+      setBusy(true);
+      await setMaintenance(next, profile?.id ?? null);
+      toast.success(next ? "Mode maintenance ACTIVÉ — plateforme verrouillée." : "Mode maintenance désactivé.");
+    } catch (e: any) {
+      toast.error(e?.message || "Action refusée");
+    } finally {
+      setBusy(false);
+      setConfirmOpen(false);
+    }
+  };
 
   const handleSave = (label: string) => {
     save();
