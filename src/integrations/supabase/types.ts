@@ -49,6 +49,35 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          id: string
+          maintenance_mode: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          maintenance_mode?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          maintenance_mode?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approvals: {
         Row: {
           acted_at: string | null
@@ -1159,6 +1188,7 @@ export type Database = {
         Args: { _auth_id: string; _target_user_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { _auth_id: string }; Returns: boolean }
       is_task_participant: {
         Args: { _auth_id: string; _task_id: string }
         Returns: boolean
