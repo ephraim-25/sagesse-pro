@@ -83,6 +83,7 @@ const App = () => (
             <Route path="/audit" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </MaintenanceGate>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
