@@ -84,7 +84,98 @@ const Settings = () => {
               <CalendarDays className="w-4 h-4 mr-1" /> Calendrier
             </TabsTrigger>
             <TabsTrigger value="system">Système</TabsTrigger>
+            {superAdmin && (
+              <TabsTrigger value="maintenance" className="text-destructive data-[state=active]:text-destructive">
+                <Power className="w-4 h-4 mr-1" /> Maintenance
+              </TabsTrigger>
+            )}
           </TabsList>
+
+          {superAdmin && (
+            <TabsContent value="maintenance">
+              <div className="bg-card rounded-xl p-6 shadow-soft border border-destructive/30">
+                <div className="flex items-center gap-2 mb-6">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  <h3 className="font-semibold text-foreground">Maintenance opérationnelle — Kill Switch</h3>
+                </div>
+
+                <div className="space-y-6 max-w-2xl">
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                    <p className="text-sm font-medium text-foreground">
+                      Mode maintenance : {maintenance_mode ? (
+                        <span className="text-destructive font-bold">ACTIVÉ</span>
+                      ) : (
+                        <span className="text-success font-bold">DÉSACTIVÉ</span>
+                      )}
+                    </p>
+                    {updated_at && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Dernière mise à jour : {new Date(updated_at).toLocaleString("fr-FR")}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Lorsqu'il est activé, tous les utilisateurs (sauf vous, Super Administrateur) voient un écran
+                      de maintenance et perdent l'accès à la plateforme en temps réel.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between py-3 border-b border-border/50 gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">Bouton rouge — Verrouiller la plateforme</p>
+                      <p className="text-xs text-muted-foreground">
+                        Effet immédiat sur toutes les sessions connectées (temps réel).
+                      </p>
+                    </div>
+
+                    {maintenance_mode ? (
+                      <Switch
+                        checked={true}
+                        disabled={busy}
+                        onCheckedChange={() => toggleMaintenance(false)}
+                      />
+                    ) : (
+                      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                        <AlertDialogTrigger asChild>
+                          <Switch checked={false} disabled={busy} onCheckedChange={() => setConfirmOpen(true)} />
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                              <AlertTriangle className="w-5 h-5" /> ATTENTION
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Vous allez déconnecter tous les utilisateurs et verrouiller la plateforme.
+                              Seul vous, en tant que Super Administrateur, garderez l'accès. Confirmer ?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={busy}>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              disabled={busy}
+                              onClick={(e) => { e.preventDefault(); toggleMaintenance(true); }}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Oui, activer le Kill Switch
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+
+                  {maintenance_mode && (
+                    <Button
+                      variant="outline"
+                      onClick={() => toggleMaintenance(false)}
+                      disabled={busy}
+                    >
+                      <Power className="w-4 h-4 mr-2" /> Désactiver et rétablir l'accès
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="calendar">
             <div className="bg-card rounded-xl p-6 shadow-soft border border-border/50">
