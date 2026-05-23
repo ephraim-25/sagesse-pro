@@ -1,6 +1,9 @@
 /**
- * Référentiel des compétences clés dans l'administration publique (RDC / SIGC-CSN).
- * Organisé par grandes familles. L'agent peut s'auto-évaluer de 1 (notion) à 5 (expert).
+ * Catalogue exhaustif des compétences pour un grand organe du Gouvernement (SIGC-CSN).
+ * Couvre les corps de métiers : santé, logistique, médias, administration,
+ * finances/droit, recherche, technique/numérique, management, langues.
+ * L'agent ne peut PAS saisir de texte libre : il choisit une catégorie puis coche
+ * les compétences associées et indique un niveau (Junior / Intermédiaire / Expert).
  */
 export interface CompetenceCatalogItem {
   category: string;
@@ -9,13 +12,84 @@ export interface CompetenceCatalogItem {
 
 export const PUBLIC_ADMIN_COMPETENCES: CompetenceCatalogItem[] = [
   {
-    category: "Gouvernance & Cadre Légal",
+    category: "Santé & Médical",
     items: [
-      "Connaissance du cadre constitutionnel",
-      "Procédures administratives publiques",
-      "Éthique et déontologie du fonctionnaire",
-      "Lutte contre la corruption",
-      "Gestion des archives publiques",
+      "Soins infirmiers d'urgence",
+      "Gestion de pharmacie / dispensaire",
+      "Premiers secours",
+      "Suivi médical du travail",
+      "Hygiène et sécurité sanitaire",
+    ],
+  },
+  {
+    category: "Logistique & Transport",
+    items: [
+      "Conduite sécurisée (véhicules légers)",
+      "Conduite VIP / protocole",
+      "Mécanique automobile (maintenance)",
+      "Mécanique automobile (diagnostic)",
+      "Gestion de flotte",
+      "Logistique d'événements officiels",
+      "Gestion d'entrepôt / magasin",
+    ],
+  },
+  {
+    category: "Médias, Édition & Communication",
+    items: [
+      "Journalisme d'investigation",
+      "Rédaction d'articles",
+      "Correcteur / écrivain public",
+      "Relations presse",
+      "Photographie",
+      "Caméraman / prise de vue",
+      "Montage vidéo",
+      "Community management institutionnel",
+      "Communication institutionnelle",
+    ],
+  },
+  {
+    category: "Administration & Secrétariat",
+    items: [
+      "Secrétariat de direction",
+      "Accueil et protocole d'État",
+      "Rédaction administrative",
+      "Archivage institutionnel",
+      "Gestion des dossiers agents",
+      "Organisation de réunions officielles",
+    ],
+  },
+  {
+    category: "Économie, Finances & Droit",
+    items: [
+      "Comptabilité publique",
+      "Gestion budgétaire",
+      "Analyse financière",
+      "Marchés publics",
+      "Droit public",
+      "Contentieux administratif",
+      "Audit interne",
+    ],
+  },
+  {
+    category: "Recherche & Science",
+    items: [
+      "Méthodologie de recherche",
+      "Rédaction scientifique",
+      "Analyse statistique",
+      "Gestion de projets scientifiques",
+      "Veille documentaire",
+    ],
+  },
+  {
+    category: "Technique & Numérique",
+    items: [
+      "Maintenance informatique",
+      "Gestion des réseaux",
+      "Support technique utilisateurs",
+      "Développement d'applications",
+      "Cybersécurité",
+      "Gestion documentaire numérique",
+      "Bureautique avancée (Word/Excel/PowerPoint)",
     ],
   },
   {
@@ -26,49 +100,6 @@ export const PUBLIC_ADMIN_COMPETENCES: CompetenceCatalogItem[] = [
       "Conduite de réunions",
       "Prise de décision",
       "Résolution de conflits",
-      "Délégation et coordination",
-    ],
-  },
-  {
-    category: "Gestion Administrative",
-    items: [
-      "Rédaction administrative",
-      "Gestion budgétaire",
-      "Marchés publics",
-      "Gestion des ressources humaines",
-      "Suivi-évaluation de projets",
-      "Reporting institutionnel",
-    ],
-  },
-  {
-    category: "Communication",
-    items: [
-      "Communication institutionnelle",
-      "Communication interpersonnelle",
-      "Présentation orale",
-      "Gestion des relations publiques",
-      "Médiation",
-    ],
-  },
-  {
-    category: "Numérique & Bureautique",
-    items: [
-      "Microsoft Word / traitement de texte",
-      "Microsoft Excel / tableurs",
-      "Microsoft PowerPoint / présentations",
-      "Outils collaboratifs (Teams, Drive)",
-      "Cybersécurité de base",
-      "Gestion documentaire numérique",
-    ],
-  },
-  {
-    category: "Analyse & Stratégie",
-    items: [
-      "Analyse de politiques publiques",
-      "Veille stratégique",
-      "Planification stratégique",
-      "Analyse statistique de données",
-      "Élaboration d'indicateurs de performance",
     ],
   },
   {
@@ -84,10 +115,33 @@ export const PUBLIC_ADMIN_COMPETENCES: CompetenceCatalogItem[] = [
   },
 ];
 
+/**
+ * Niveaux simplifiés exposés à l'agent. Stockés en `niveau` integer (compat existant).
+ * Junior = 2, Intermédiaire = 3, Expert = 5.
+ */
+export const NIVEAU_OPTIONS = [
+  { value: 2, label: "Junior" },
+  { value: 3, label: "Intermédiaire" },
+  { value: 5, label: "Expert" },
+] as const;
+
 export const NIVEAU_LABELS: Record<number, string> = {
   1: "Notion",
-  2: "Application",
-  3: "Maîtrise",
+  2: "Junior",
+  3: "Intermédiaire",
   4: "Avancé",
   5: "Expert",
 };
+
+export function niveauLabel(n: number | null | undefined): string {
+  if (!n) return "Non évalué";
+  return NIVEAU_LABELS[n] ?? `Niveau ${n}`;
+}
+
+/** Renvoie la catégorie qui contient une compétence donnée (ou null). */
+export function findCategoryFor(competence: string): string | null {
+  for (const c of PUBLIC_ADMIN_COMPETENCES) {
+    if (c.items.includes(competence)) return c.category;
+  }
+  return null;
+}
