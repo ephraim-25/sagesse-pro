@@ -1,12 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Award, Loader2, Save, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Award, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
-import { PUBLIC_ADMIN_COMPETENCES, NIVEAU_LABELS } from "@/lib/publicAdminCompetences";
+import {
+  PUBLIC_ADMIN_COMPETENCES,
+  NIVEAU_OPTIONS,
+  niveauLabel,
+} from "@/lib/publicAdminCompetences";
 
 interface Props {
   profileId: string;
@@ -21,7 +32,10 @@ interface CompetenceRow {
 export function CompetencesEditor({ profileId }: Props) {
   const [rows, setRows] = useState<CompetenceRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [openCategory, setOpenCategory] = useState<string | null>(
+    PUBLIC_ADMIN_COMPETENCES[0]?.category ?? null,
+  );
+  const [busy, setBusy] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -38,44 +52,57 @@ export function CompetencesEditor({ profileId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId]);
 
-  const getRow = (label: string) => rows.find((r) => r.competence === label);
+  const byLabel = useMemo(() => {
+    const m = new Map<string, CompetenceRow>();
+    rows.forEach((r) => m.set(r.competence, r));
+    return m;
+  }, [rows]);
 
-  const upsert = async (label: string, niveau: number) => {
-    setSaving(label);
-    const existing = getRow(label);
-    if (existing) {
-      const { error } = await supabase
-        .from("competences")
-        .update({ niveau })
-        .eq("id", existing.id);
-      if (error) toast.error(error.message);
-      else {
-        setRows((prev) => prev.map((r) => (r.id === existing.id ? { ...r, niveau } : r)));
-        toast.success(`« ${label} » mis à jour`);
-      }
-    } else {
-      const { data, error } = await supabase
-        .from("competences")
-        .insert({ user_id: profileId, competence: label, niveau })
-        .select("id, competence, niveau")
-        .single();
-      if (error) toast.error(error.message);
-      else if (data) {
-        setRows((prev) => [...prev, data as CompetenceRow]);
-        toast.success(`« ${label} » ajouté`);
-      }
+  const add = async (label: string, niveau: number) => {
+    setBusy(label);
+    const { data, error } = await supabase
+      .from("competences")
+      .insert({ user_id: profileId, competence: label, niveau })
+      .select("id, competence, niveau")
+      .single();
+    if (error) toast.error(error.message);
+    else if (data) {
+      setRows((p) => [...p, data as CompetenceRow]);
+      toast.success(`« ${label} » ajouté`);
     }
-    setSaving(null);
+    setBusy(null);
   };
 
-  const remove = async (label: string) => {
-    const existing = getRow(label);
-    if (!existing) return;
-    const { error } = await supabase.from("competences").delete().eq("id", existing.id);
+  const updateLevel = async (row: CompetenceRow, niveau: number) => {
+    setBusy(row.competence);
+    const { error } = await supabase
+      .from("competences")
+      .update({ niveau })
+      .eq("id", row.id);
     if (error) toast.error(error.message);
     else {
-      setRows((prev) => prev.filter((r) => r.id !== existing.id));
-      toast.success(`« ${label} » retiré`);
+      setRows((p) => p.map((r) => (r.id === row.id ? { ...r, niveau } : r)));
+    }
+    setBusy(null);
+  };
+
+  const remove = async (row: CompetenceRow) => {
+    setBusy(row.competence);
+    const { error } = await supabase.from("competences").delete().eq("id", row.id);
+    if (error) toast.error(error.message);
+    else {
+      setRows((p) => p.filter((r) => r.id !== row.id));
+      toast.success(`« ${row.competence} » retiré`);
+    }
+    setBusy(null);
+  };
+
+  const toggle = async (label: string, checked: boolean) => {
+    const existing = byLabel.get(label);
+    if (checked && !existing) {
+      await add(label, 3); // default Intermédiaire
+    } else if (!checked && existing) {
+      await remove(existing);
     }
   };
 
@@ -94,95 +121,97 @@ export function CompetencesEditor({ profileId }: Props) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Award className="w-5 h-5" />
-          Compétences clés (Administration Publique)
+          Compétences professionnelles
         </CardTitle>
         <CardDescription>
-          Auto-évaluez vos compétences (1 = notion, 5 = expert). Visibles par votre hiérarchie,
-          le Président et l'Administration dans la cartographie des compétences.
+          Choisissez une catégorie, cochez vos compétences puis indiquez votre niveau
+          (Junior, Intermédiaire, Expert). Aucune saisie libre — la cartographie reste cohérente.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {PUBLIC_ADMIN_COMPETENCES.map((cat) => (
-          <div key={cat.category} className="space-y-3">
-            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              {cat.category}
-            </h4>
-            <div className="space-y-3">
-              {cat.items.map((label) => {
-                const row = getRow(label);
-                const value = row?.niveau ?? 0;
-                return (
-                  <div
-                    key={label}
-                    className="border border-border rounded-lg p-3 bg-card/50"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <p className="text-sm font-medium">{label}</p>
-                      <div className="flex items-center gap-2">
-                        {value > 0 ? (
-                          <Badge variant="secondary" className="text-xs">
-                            {NIVEAU_LABELS[value]} ({value}/5)
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">
-                            Non évalué
-                          </Badge>
-                        )}
-                        {row && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2"
-                            onClick={() => remove(label)}
-                            aria-label={`Retirer ${label}`}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+      <CardContent className="space-y-3">
+        {PUBLIC_ADMIN_COMPETENCES.map((cat) => {
+          const open = openCategory === cat.category;
+          const selectedInCat = cat.items.filter((i) => byLabel.has(i)).length;
+          return (
+            <div key={cat.category} className="border border-border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setOpenCategory(open ? null : cat.category)}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-muted/40 hover:bg-muted/60 transition"
+              >
+                <div className="flex items-center gap-2 text-left">
+                  <span className="font-semibold text-sm">{cat.category}</span>
+                  {selectedInCat > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedInCat} sélectionnée{selectedInCat > 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                </div>
+                {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+              {open && (
+                <div className="p-3 space-y-2 bg-card">
+                  {cat.items.map((label) => {
+                    const row = byLabel.get(label);
+                    const checked = !!row;
+                    return (
+                      <div
+                        key={label}
+                        className="flex flex-wrap items-center gap-3 p-2 rounded border border-border/50"
+                      >
+                        <Checkbox
+                          id={`cmp-${label}`}
+                          checked={checked}
+                          disabled={busy === label}
+                          onCheckedChange={(v) => toggle(label, !!v)}
+                        />
+                        <label
+                          htmlFor={`cmp-${label}`}
+                          className="text-sm flex-1 cursor-pointer min-w-[160px]"
+                        >
+                          {label}
+                        </label>
+                        {checked && row && (
+                          <>
+                            <Select
+                              value={String(row.niveau)}
+                              onValueChange={(v) => updateLevel(row, Number(v))}
+                            >
+                              <SelectTrigger className="h-8 w-[150px]">
+                                <SelectValue placeholder="Niveau" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {NIVEAU_OPTIONS.map((n) => (
+                                  <SelectItem key={n.value} value={String(n.value)}>
+                                    {n.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Badge variant="outline" className="text-xs">
+                              {niveauLabel(row.niveau)}
+                            </Badge>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2"
+                              disabled={busy === label}
+                              onClick={() => remove(row)}
+                              aria-label={`Retirer ${label}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </>
                         )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Slider
-                        min={0}
-                        max={5}
-                        step={1}
-                        value={[value]}
-                        onValueChange={(v) => {
-                          // optimistic UI
-                          if (row) {
-                            setRows((prev) =>
-                              prev.map((r) => (r.id === row.id ? { ...r, niveau: v[0] } : r))
-                            );
-                          }
-                        }}
-                        onValueCommit={(v) => {
-                          if (v[0] > 0) upsert(label, v[0]);
-                          else if (row) remove(label);
-                        }}
-                        aria-label={`Niveau pour ${label}`}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={value > 0 ? "secondary" : "default"}
-                        disabled={saving === label}
-                        onClick={() => upsert(label, Math.max(1, value))}
-                      >
-                        {saving === label ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Save className="w-3 h-3" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
