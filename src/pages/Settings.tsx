@@ -11,6 +11,7 @@ import {
   Shield as ShieldIcon,
   Power,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -119,7 +120,7 @@ const Settings = () => {
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b border-border/50 gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 border-b border-border/50 gap-3">
                     <div className="min-w-0">
                       <p className="font-medium text-sm">Bouton rouge — Verrouiller la plateforme</p>
                       <p className="text-xs text-muted-foreground">
@@ -128,15 +129,25 @@ const Settings = () => {
                     </div>
 
                     {maintenance_mode ? (
-                      <Switch
-                        checked={true}
+                      <Button
+                        variant="outline"
+                        onClick={() => toggleMaintenance(false)}
                         disabled={busy}
-                        onCheckedChange={() => toggleMaintenance(false)}
-                      />
+                      >
+                        {busy ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Power className="w-4 h-4 mr-2" />
+                        )}
+                        Désactiver et rétablir l'accès
+                      </Button>
                     ) : (
                       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                         <AlertDialogTrigger asChild>
-                          <Switch checked={false} disabled={busy} onCheckedChange={() => setConfirmOpen(true)} />
+                          <Button variant="destructive" disabled={busy}>
+                            <Power className="w-4 h-4 mr-2" />
+                            Activer le Kill Switch
+                          </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
@@ -144,8 +155,9 @@ const Settings = () => {
                               <AlertTriangle className="w-5 h-5" /> ATTENTION
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              Vous allez déconnecter tous les utilisateurs et verrouiller la plateforme.
-                              Seul vous, en tant que Super Administrateur, garderez l'accès. Confirmer ?
+                              Vous allez verrouiller la plateforme pour tous les utilisateurs.
+                              Seul vous, en tant que Super Administrateur, garderez l'accès.
+                              Confirmer ?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -155,23 +167,13 @@ const Settings = () => {
                               onClick={(e) => { e.preventDefault(); toggleMaintenance(true); }}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                              Oui, activer le Kill Switch
+                              {busy ? "Activation…" : "Oui, activer le Kill Switch"}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
                   </div>
-
-                  {maintenance_mode && (
-                    <Button
-                      variant="outline"
-                      onClick={() => toggleMaintenance(false)}
-                      disabled={busy}
-                    >
-                      <Power className="w-4 h-4 mr-2" /> Désactiver et rétablir l'accès
-                    </Button>
-                  )}
                 </div>
               </div>
             </TabsContent>

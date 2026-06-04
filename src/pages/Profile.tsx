@@ -254,10 +254,7 @@ const Profile = () => {
       if (!formData.nom_bureau?.trim()) { toast.error('Le nom de votre Bureau est obligatoire.'); return; }
       if (!formData.superieur_id) { toast.error('Vous devez sélectionner votre Chef de Division.'); return; }
     }
-    if (isAgent && !formData.superieur_id) {
-      toast.error('Vous devez sélectionner votre Chef de Bureau.');
-      return;
-    }
+    // Agents : Chef de Bureau optionnel (tous ne sont pas encore inscrits)
 
     setLoading(true);
     try {
@@ -661,12 +658,12 @@ const Profile = () => {
 
                   {isAgent && (
                     <div className="space-y-2">
-                      <Label htmlFor="superieur_id">{superieurLabel} *</Label>
+                      <Label htmlFor="superieur_id">{superieurLabel} (optionnel)</Label>
                       <Select
                         value={formData.superieur_id || ''}
                         onValueChange={(v) => handleInputChange('superieur_id', v)}
                       >
-                        <SelectTrigger><SelectValue placeholder="Sélectionner votre Chef de Bureau" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Sélectionner votre Chef de Bureau (si disponible)" /></SelectTrigger>
                         <SelectContent>
                           {superieurs.map((s) => (
                             <SelectItem key={s.id} value={s.id}>
@@ -676,7 +673,9 @@ const Profile = () => {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Votre bureau, division et direction sont hérités automatiquement de votre Chef de Bureau.
+                        Si votre Chef de Bureau n'est pas encore inscrit, laissez ce champ vide —
+                        vous pourrez le renseigner plus tard. Votre bureau, division et direction
+                        sont hérités automatiquement dès qu'il est défini.
                       </p>
                     </div>
                   )}

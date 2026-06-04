@@ -769,6 +769,36 @@ export type Database = {
           },
         ]
       }
+      skills_directory: {
+        Row: {
+          active: boolean
+          category: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       taches: {
         Row: {
           assigned_to: string | null
@@ -1118,6 +1148,48 @@ export type Database = {
           },
         ]
       }
+      user_competences: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          skill_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: number
+          skill_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          skill_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_competences_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills_directory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_competences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1217,6 +1289,15 @@ export type Database = {
           bureau: string
           direction: string
           division: string
+        }[]
+      }
+      resolve_profiles_structure_batch: {
+        Args: { p_ids: string[] }
+        Returns: {
+          bureau: string
+          direction: string
+          division: string
+          profile_id: string
         }[]
       }
       set_user_grade_and_role: {
