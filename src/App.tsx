@@ -33,6 +33,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Notifications from "./pages/Notifications";
 import Leaves from "./pages/Leaves";
 import Audit from "./pages/Audit";
+import SkillsCatalog from "./pages/SkillsCatalog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/conges" element={<ProtectedRoute><Leaves /></ProtectedRoute>} />
             <Route path="/profil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
+            <Route path="/catalogue-competences" element={<ProtectedRoute requireSuperAdmin><SkillsCatalog /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </MaintenanceGate>
