@@ -11,6 +11,7 @@ import {
   Shield as ShieldIcon,
   Power,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
