@@ -15,19 +15,15 @@ import { Search, Award, BookOpen, TrendingUp, Users, Loader2, Building2 } from "
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  PUBLIC_ADMIN_COMPETENCES,
-  NIVEAU_OPTIONS,
-  findCategoryFor,
-  niveauLabel,
-} from "@/lib/publicAdminCompetences";
+import { useSkillsDirectory, NIVEAU_OPTIONS, niveauLabel } from "@/hooks/useSkillsDirectory";
 
-interface Competence {
+interface UserCompRow {
   id: string;
-  competence: string;
-  niveau: number;
   user_id: string;
-  profile?: { nom: string; prenom: string; fonction: string | null };
+  skill_id: string;
+  level: number;
+  skill: { id: string; category: string; label: string } | null;
+  profile: { id: string; nom: string; prenom: string; fonction: string | null } | null;
 }
 
 interface ResolvedStructure {
@@ -39,16 +35,17 @@ interface ResolvedStructure {
 const Competences = () => {
   const { profile, grade, isSuperAdmin, hasRole, loading: authLoading } = useAuth();
 
-  // Strict access: only Président, Secrétaire Permanent or Super Admin
   const isPresident = hasRole("president");
   const isSP = grade?.code === "secretaire_permanent";
   const allowed = isSuperAdmin || isPresident || isSP;
 
+  const { skills } = useSkillsDirectory();
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
-  const [competenceFilter, setCompetenceFilter] = useState<string>("all");
+  const [skillFilter, setSkillFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
-  const [competences, setCompetences] = useState<Competence[]>([]);
+  const [rows, setRows] = useState<UserCompRow[]>([]);
   const [structures, setStructures] = useState<Record<string, ResolvedStructure>>({});
   const [loading, setLoading] = useState(true);
 
@@ -56,72 +53,79 @@ const Competences = () => {
     if (!allowed || !profile) return;
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("competences")
+      const { data } = await (supabase as any)
+        .from("user_competences")
         .select(
-          `*, profile:profiles!competences_user_id_fkey(nom, prenom, fonction)`,
+          `id, user_id, skill_id, level,
+           skill:skills_directory!user_competences_skill_id_fkey(id, category, label),
+           profile:profiles!user_competences_user_id_fkey(id, nom, prenom, fonction)`,
         )
         .order("created_at", { ascending: false });
-      setCompetences((data as Competence[]) || []);
+      setRows((data as UserCompRow[]) || []);
       setLoading(false);
     };
     load();
   }, [profile, allowed]);
 
-  // Resolve hierarchical structure for each unique user shown
+  // Batch resolve structures in 1 RPC call
   useEffect(() => {
     if (!allowed) return;
-    const ids = Array.from(new Set(competences.map((c) => c.user_id))).filter(
+    const ids = Array.from(new Set(rows.map((r) => r.user_id))).filter(
       (id) => !structures[id],
     );
     if (ids.length === 0) return;
     let cancelled = false;
     (async () => {
+      const { data } = await (supabase as any).rpc("resolve_profiles_structure_batch", {
+        p_ids: ids,
+      });
+      if (cancelled || !Array.isArray(data)) return;
       const next: Record<string, ResolvedStructure> = {};
-      for (const id of ids) {
-        const { data } = await supabase.rpc("resolve_profile_structure", {
-          p_profile_id: id,
-        });
-        const row = Array.isArray(data) ? data[0] : data;
-        next[id] = {
-          bureau: row?.bureau ?? null,
-          division: row?.division ?? null,
-          direction: row?.direction ?? null,
+      for (const row of data) {
+        next[row.profile_id] = {
+          bureau: row.bureau ?? null,
+          division: row.division ?? null,
+          direction: row.direction ?? null,
         };
       }
-      if (!cancelled) setStructures((p) => ({ ...p, ...next }));
+      setStructures((p) => ({ ...p, ...next }));
     })();
     return () => {
       cancelled = true;
     };
-  }, [competences, allowed, structures]);
+  }, [rows, allowed, structures]);
 
-  const competencesInCategory = useMemo(() => {
-    if (category === "all") return PUBLIC_ADMIN_COMPETENCES.flatMap((c) => c.items);
-    return PUBLIC_ADMIN_COMPETENCES.find((c) => c.category === category)?.items ?? [];
-  }, [category]);
+  const categories = useMemo(
+    () => Array.from(new Set(skills.map((s) => s.category))).sort(),
+    [skills],
+  );
+  const skillsInCategory = useMemo(() => {
+    if (category === "all") return skills;
+    return skills.filter((s) => s.category === category);
+  }, [skills, category]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return competences.filter((c) => {
-      if (category !== "all" && findCategoryFor(c.competence) !== category) return false;
-      if (competenceFilter !== "all" && c.competence !== competenceFilter) return false;
-      if (levelFilter !== "all" && String(c.niveau) !== levelFilter) return false;
+    return rows.filter((r) => {
+      if (category !== "all" && r.skill?.category !== category) return false;
+      if (skillFilter !== "all" && r.skill_id !== skillFilter) return false;
+      if (levelFilter !== "all" && String(r.level) !== levelFilter) return false;
       if (q) {
-        const name = c.profile ? `${c.profile.prenom} ${c.profile.nom}`.toLowerCase() : "";
+        const name = r.profile ? `${r.profile.prenom} ${r.profile.nom}`.toLowerCase() : "";
+        const lbl = r.skill?.label.toLowerCase() ?? "";
         if (
           !name.includes(q) &&
-          !c.competence.toLowerCase().includes(q) &&
-          !(c.profile?.fonction ?? "").toLowerCase().includes(q)
+          !lbl.includes(q) &&
+          !(r.profile?.fonction ?? "").toLowerCase().includes(q)
         )
           return false;
       }
       return true;
     });
-  }, [competences, search, category, competenceFilter, levelFilter]);
+  }, [rows, search, category, skillFilter, levelFilter]);
 
-  const totalExperts = competences.filter((c) => (c.niveau ?? 0) >= 5).length;
-  const uniqueMembers = new Set(competences.map((c) => c.user_id)).size;
+  const totalExperts = rows.filter((r) => r.level >= 5).length;
+  const uniqueMembers = new Set(rows.map((r) => r.user_id)).size;
 
   if (authLoading) {
     return (
@@ -146,7 +150,6 @@ const Competences = () => {
           </p>
         </div>
 
-        {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="relative md:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -161,7 +164,7 @@ const Competences = () => {
             value={category}
             onValueChange={(v) => {
               setCategory(v);
-              setCompetenceFilter("all");
+              setSkillFilter("all");
             }}
           >
             <SelectTrigger>
@@ -169,22 +172,22 @@ const Competences = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes catégories</SelectItem>
-              {PUBLIC_ADMIN_COMPETENCES.map((c) => (
-                <SelectItem key={c.category} value={c.category}>
-                  {c.category}
+              {categories.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={competenceFilter} onValueChange={setCompetenceFilter}>
+          <Select value={skillFilter} onValueChange={setSkillFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Compétence" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes compétences</SelectItem>
-              {competencesInCategory.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+              {skillsInCategory.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -204,39 +207,37 @@ const Competences = () => {
           </Select>
         </div>
 
-        {/* Quick filter chips */}
         <div className="flex flex-wrap gap-2">
           <Button
             variant={category === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => {
               setCategory("all");
-              setCompetenceFilter("all");
+              setSkillFilter("all");
             }}
           >
             Toutes
           </Button>
-          {PUBLIC_ADMIN_COMPETENCES.map((c) => (
+          {categories.map((c) => (
             <Button
-              key={c.category}
-              variant={category === c.category ? "default" : "outline"}
+              key={c}
+              variant={category === c ? "default" : "outline"}
               size="sm"
               onClick={() => {
-                setCategory(c.category);
-                setCompetenceFilter("all");
+                setCategory(c);
+                setSkillFilter("all");
               }}
             >
-              {c.category}
+              {c}
             </Button>
           ))}
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatTile icon={<Award className="w-5 h-5 text-primary" />} value={totalExperts} label="Experts" />
           <StatTile
             icon={<BookOpen className="w-5 h-5 text-info" />}
-            value={competences.length}
+            value={rows.length}
             label="Compétences"
           />
           <StatTile
@@ -251,7 +252,6 @@ const Competences = () => {
           />
         </div>
 
-        {/* Results */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -265,35 +265,38 @@ const Competences = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map((c) => {
-              const struct = structures[c.user_id];
-              const cat = findCategoryFor(c.competence);
+            {filtered.map((r) => {
+              const struct = structures[r.user_id];
               return (
                 <div
-                  key={c.id}
+                  key={r.id}
                   className="bg-card rounded-xl p-4 shadow-soft border border-border/50 space-y-3"
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
-                      {c.profile ? `${c.profile.prenom[0]}${c.profile.nom[0]}` : "?"}
+                      {r.profile ? `${r.profile.prenom[0]}${r.profile.nom[0]}` : "?"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">
-                        {c.profile ? `${c.profile.prenom} ${c.profile.nom}` : "Inconnu"}
+                        {r.profile ? `${r.profile.prenom} ${r.profile.nom}` : "Inconnu"}
                       </p>
-                      {c.profile?.fonction && (
-                        <p className="text-xs text-muted-foreground truncate">{c.profile.fonction}</p>
+                      {r.profile?.fonction && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {r.profile.fonction}
+                        </p>
                       )}
                     </div>
                     <Badge variant="secondary" className="shrink-0 text-xs">
-                      {niveauLabel(c.niveau)}
+                      {niveauLabel(r.level)}
                     </Badge>
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium">{c.competence}</p>
-                    {cat && <p className="text-xs text-muted-foreground">{cat}</p>}
-                    <Progress value={(c.niveau / 5) * 100} className="h-2 mt-2" />
+                    <p className="text-sm font-medium">{r.skill?.label}</p>
+                    {r.skill?.category && (
+                      <p className="text-xs text-muted-foreground">{r.skill.category}</p>
+                    )}
+                    <Progress value={(r.level / 5) * 100} className="h-2 mt-2" />
                   </div>
 
                   <div className="flex items-start gap-2 text-xs text-muted-foreground border-t border-border/50 pt-2">
