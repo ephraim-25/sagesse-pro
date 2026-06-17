@@ -46,10 +46,21 @@ export async function uploadChatFiles(
       onError(explainError(error as { message?: string; statusCode?: string | number }, file.name));
       continue;
     }
-    const { data } = supabase.storage.from("task-chat-attachments").getPublicUrl(path);
-    out.push({ url: data.publicUrl, name: file.name, type: file.type, size: file.size });
+    // Bucket is private; persist the storage path and sign on demand at read time.
+    out.push({ url: path, name: file.name, type: file.type, size: file.size });
   }
   return out;
+}
+
+/** Resolve a stored attachment reference (path or legacy public URL) to a usable URL. */
+export async function resolveAttachmentUrl(stored: string): Promise<string> {
+  if (!stored) return stored;
+  if (/^https?:\/\//i.test(stored)) return stored; // legacy entries
+  const { data, error } = await supabase.storage
+    .from("task-chat-attachments")
+    .createSignedUrl(stored, 60 * 60);
+  if (error || !data?.signedUrl) return stored;
+  return data.signedUrl;
 }
 
 function explainError(err: { message?: string; statusCode?: string | number } | null | undefined, name: string) {
