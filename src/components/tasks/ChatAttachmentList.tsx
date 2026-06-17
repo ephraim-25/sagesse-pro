@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { FileText, Image as ImageIcon, File, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ChatAttachment } from "./ChatAttachmentPicker";
+import { resolveAttachmentUrl, type ChatAttachment } from "./ChatAttachmentPicker";
 
 function getIcon(type: string) {
   if (type.startsWith("image/")) return ImageIcon;
@@ -14,22 +15,36 @@ interface ChatAttachmentListProps {
 }
 
 export function ChatAttachmentList({ attachments, isMine }: ChatAttachmentListProps) {
+  const [resolved, setResolved] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const urls = await Promise.all((attachments || []).map((a) => resolveAttachmentUrl(a.url)));
+      if (!cancelled) setResolved(urls);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [attachments]);
+
   if (!attachments || attachments.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-1.5 mt-1.5">
       {attachments.map((att, idx) => {
+        const href = resolved[idx] || att.url;
         const isImage = att.type?.startsWith("image/");
         if (isImage) {
           return (
             <a
               key={idx}
-              href={att.url}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               className="block rounded-lg overflow-hidden border max-w-[220px]"
             >
-              <img src={att.url} alt={att.name} className="w-full h-auto object-cover" />
+              <img src={href} alt={att.name} className="w-full h-auto object-cover" />
             </a>
           );
         }
@@ -37,7 +52,7 @@ export function ChatAttachmentList({ attachments, isMine }: ChatAttachmentListPr
         return (
           <a
             key={idx}
-            href={att.url}
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
