@@ -149,7 +149,7 @@ export function ChatAttachmentPicker({ attachments, onChange, disabled }: ChatAt
                 )}
               >
                 {isImage ? (
-                  <img src={att.url} alt={att.name} className="w-6 h-6 rounded object-cover" />
+                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
                 ) : (
                   <Icon className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
