@@ -240,6 +240,7 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
                 attachments={attachments}
                 onChange={setAttachments}
                 disabled={sending}
+                taskId={taskId}
               />
             </div>
           )}
@@ -249,7 +250,9 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
                 attachments={attachments}
                 onChange={setAttachments}
                 disabled={sending}
+                taskId={taskId}
               />
+
             )}
             <Input
               value={input}
