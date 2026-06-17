@@ -150,17 +150,27 @@ const ResetPassword = () => {
   }
 
   return (
+    <>
+      <Helmet>
+        <title>Nouveau mot de passe — SIGC-CSN</title>
+        <meta name="description" content="Définissez un nouveau mot de passe pour votre compte SIGC-CSN, plateforme du Conseil Scientifique National." />
+        <link rel="canonical" href="https://sigc-csn.online/reset-password" />
+        <meta property="og:title" content="Nouveau mot de passe — SIGC-CSN" />
+        <meta property="og:description" content="Sécurisez votre accès à la plateforme SIGC-CSN." />
+        <meta property="og:url" content="https://sigc-csn.online/reset-password" />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
-          <img 
-            src={logoCsn} 
-            alt="CSN Logo" 
+          <img
+            src={logoCsn}
+            alt="CSN Logo"
             className="w-16 h-16 mx-auto mb-4 object-contain"
           />
-          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN</h1>
-          <p className="text-muted-foreground text-sm">Nouveau mot de passe</p>
+          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN — Réinitialisation du mot de passe</h1>
+          <p className="text-muted-foreground text-sm">Choisissez un nouveau mot de passe sécurisé</p>
         </div>
 
         <Card className="shadow-lg border-border/50">
