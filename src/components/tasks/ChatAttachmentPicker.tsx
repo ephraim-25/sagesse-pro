@@ -16,7 +16,9 @@ interface ChatAttachmentPickerProps {
   attachments: ChatAttachment[];
   onChange: (next: ChatAttachment[]) => void;
   disabled?: boolean;
+  taskId?: string;
 }
+
 
 export const CHAT_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 export const CHAT_ATTACHMENT_ACCEPT = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt";
@@ -29,16 +31,21 @@ const ACCEPTED = CHAT_ATTACHMENT_ACCEPT;
  */
 export async function uploadChatFiles(
   files: File[],
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  taskId?: string
 ): Promise<ChatAttachment[]> {
   const out: ChatAttachment[] = [];
+  if (!taskId) {
+    onError("Identifiant de tâche manquant pour l'envoi de pièces jointes.");
+    return out;
+  }
   for (const file of files) {
     if (file.size > MAX_SIZE) {
       onError(`« ${file.name} » dépasse la taille de 10 Mo.`);
       continue;
     }
     const ext = file.name.split(".").pop() || "bin";
-    const path = `chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `${taskId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage
       .from("task-chat-attachments")
       .upload(path, file, { contentType: file.type });
@@ -51,6 +58,7 @@ export async function uploadChatFiles(
   }
   return out;
 }
+
 
 /** Resolve a stored attachment reference (path or legacy public URL) to a usable URL. */
 export async function resolveAttachmentUrl(stored: string): Promise<string> {
@@ -87,7 +95,7 @@ function getIcon(type: string) {
   return File;
 }
 
-export function ChatAttachmentPicker({ attachments, onChange, disabled }: ChatAttachmentPickerProps) {
+export function ChatAttachmentPicker({ attachments, onChange, disabled, taskId }: ChatAttachmentPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -98,13 +106,14 @@ export function ChatAttachmentPicker({ attachments, onChange, disabled }: ChatAt
     if (files.length === 0) return;
     setUploading(true);
     try {
-      const uploaded = await uploadChatFiles(files, (m) => toast.error(m));
+      const uploaded = await uploadChatFiles(files, (m) => toast.error(m), taskId);
       if (uploaded.length > 0) onChange([...attachments, ...uploaded]);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   };
+
 
   const remove = (idx: number) => {
     const next = attachments.filter((_, i) => i !== idx);

@@ -122,7 +122,7 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
     if (files.length === 0) return;
     setDropUploading(true);
     try {
-      const uploaded = await uploadChatFiles(files, (m) => toast.error(m));
+      const uploaded = await uploadChatFiles(files, (m) => toast.error(m), taskId);
       if (uploaded.length > 0) setAttachments((prev) => [...prev, ...uploaded]);
     } finally {
       setDropUploading(false);
@@ -240,6 +240,7 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
                 attachments={attachments}
                 onChange={setAttachments}
                 disabled={sending}
+                taskId={taskId}
               />
             </div>
           )}
@@ -249,7 +250,9 @@ export function TaskChat({ taskId, taskCreatorId, taskAssignedTo }: TaskChatProp
                 attachments={attachments}
                 onChange={setAttachments}
                 disabled={sending}
+                taskId={taskId}
               />
+
             )}
             <Input
               value={input}
