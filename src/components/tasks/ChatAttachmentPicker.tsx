@@ -16,7 +16,9 @@ interface ChatAttachmentPickerProps {
   attachments: ChatAttachment[];
   onChange: (next: ChatAttachment[]) => void;
   disabled?: boolean;
+  taskId?: string;
 }
+
 
 export const CHAT_ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024; // 10MB
 export const CHAT_ATTACHMENT_ACCEPT = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt";
