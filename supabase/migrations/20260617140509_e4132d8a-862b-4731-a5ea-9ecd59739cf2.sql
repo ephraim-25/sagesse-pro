@@ -1,0 +1,32 @@
+
+REVOKE EXECUTE ON FUNCTION public.admin_delete_user(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.admin_update_profile(uuid, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.enroll_agent(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.unenroll_agent(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.set_user_grade_and_role(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.notify_all_admins(text, text, text, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.log_audit_action(text, text, jsonb, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.validate_admin_matricule(text, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.resolve_profile_structure(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.resolve_profiles_structure_batch(uuid[]) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.can_manage_user(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.can_assign_task_to(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_super_admin(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_task_participant(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_manager_of(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_same_service(uuid, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_user_grade_rank(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_user_service(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_profile_id(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_update_profile(uuid, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.enroll_agent(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.unenroll_agent(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_user_grade_and_role(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.notify_all_admins(text, text, text, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.log_audit_action(text, text, jsonb, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.validate_admin_matricule(text, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_profile_structure(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_profiles_structure_batch(uuid[]) TO authenticated;
