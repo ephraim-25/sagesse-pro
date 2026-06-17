@@ -29,16 +29,21 @@ const ACCEPTED = CHAT_ATTACHMENT_ACCEPT;
  */
 export async function uploadChatFiles(
   files: File[],
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  taskId?: string
 ): Promise<ChatAttachment[]> {
   const out: ChatAttachment[] = [];
+  if (!taskId) {
+    onError("Identifiant de tâche manquant pour l'envoi de pièces jointes.");
+    return out;
+  }
   for (const file of files) {
     if (file.size > MAX_SIZE) {
       onError(`« ${file.name} » dépasse la taille de 10 Mo.`);
       continue;
     }
     const ext = file.name.split(".").pop() || "bin";
-    const path = `chat/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `${taskId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage
       .from("task-chat-attachments")
       .upload(path, file, { contentType: file.type });
@@ -51,6 +56,7 @@ export async function uploadChatFiles(
   }
   return out;
 }
+
 
 /** Resolve a stored attachment reference (path or legacy public URL) to a usable URL. */
 export async function resolveAttachmentUrl(stored: string): Promise<string> {
