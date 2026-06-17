@@ -413,15 +413,25 @@ const Auth = () => {
   };
 
   return (
+    <>
+      <Helmet>
+        <title>Connexion — SIGC-CSN</title>
+        <meta name="description" content="Connectez-vous au SIGC-CSN, la plateforme institutionnelle du Conseil Scientifique National." />
+        <link rel="canonical" href="https://sigc-csn.online/auth" />
+        <meta property="og:title" content="Connexion — SIGC-CSN" />
+        <meta property="og:description" content="Accès sécurisé à la plateforme institutionnelle du Conseil Scientifique National." />
+        <meta property="og:url" content="https://sigc-csn.online/auth" />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img 
-            src={logoCsn} 
-            alt="Logo Conseil Scientifique National" 
+          <img
+            src={logoCsn}
+            alt="Logo Conseil Scientifique National"
             className="w-20 h-20 mx-auto mb-4 object-contain"
           />
-          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN</h1>
+          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN — Connexion à la plateforme du Conseil</h1>
           <p className="text-muted-foreground mt-2">
             Système Intégré de Gestion du Conseil
           </p>
