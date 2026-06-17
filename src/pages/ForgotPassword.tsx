@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,17 +70,27 @@ const ForgotPassword = () => {
   };
 
   return (
+    <>
+      <Helmet>
+        <title>Mot de passe oublié — SIGC-CSN</title>
+        <meta name="description" content="Réinitialisez votre mot de passe SIGC-CSN, la plateforme du Conseil Scientifique National." />
+        <link rel="canonical" href="https://sigc-csn.online/forgot-password" />
+        <meta property="og:title" content="Mot de passe oublié — SIGC-CSN" />
+        <meta property="og:description" content="Récupérez l'accès à votre compte SIGC-CSN." />
+        <meta property="og:url" content="https://sigc-csn.online/forgot-password" />
+        <meta property="og:type" content="website" />
+      </Helmet>
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
-          <img 
-            src={logoCsn} 
-            alt="CSN Logo" 
+          <img
+            src={logoCsn}
+            alt="CSN Logo"
             className="w-16 h-16 mx-auto mb-4 object-contain"
           />
-          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN</h1>
-          <p className="text-muted-foreground text-sm">Récupération de compte</p>
+          <h1 className="text-2xl font-bold text-foreground">SIGC-CSN — Récupération de compte</h1>
+          <p className="text-muted-foreground text-sm">Réinitialisez votre mot de passe en toute sécurité</p>
         </div>
 
         <Card className="shadow-lg border-border/50">
@@ -207,6 +218,7 @@ const ForgotPassword = () => {
         </p>
       </div>
     </div>
+    </>
   );
 };
 
