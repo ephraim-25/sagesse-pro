@@ -95,7 +95,7 @@ function getIcon(type: string) {
   return File;
 }
 
-export function ChatAttachmentPicker({ attachments, onChange, disabled }: ChatAttachmentPickerProps) {
+export function ChatAttachmentPicker({ attachments, onChange, disabled, taskId }: ChatAttachmentPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -106,13 +106,14 @@ export function ChatAttachmentPicker({ attachments, onChange, disabled }: ChatAt
     if (files.length === 0) return;
     setUploading(true);
     try {
-      const uploaded = await uploadChatFiles(files, (m) => toast.error(m));
+      const uploaded = await uploadChatFiles(files, (m) => toast.error(m), taskId);
       if (uploaded.length > 0) onChange([...attachments, ...uploaded]);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   };
+
 
   const remove = (idx: number) => {
     const next = attachments.filter((_, i) => i !== idx);
