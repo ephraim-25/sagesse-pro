@@ -1,0 +1,10 @@
+# SIGC-CSN
+
+> Système Intégré de Gestion du Conseil Scientifique National (CSN). Plateforme institutionnelle de gestion de la présence, du télétravail, des tâches, des compétences et de la performance des agents du Conseil.
+
+SIGC-CSN est une application interne à accès restreint. La majorité des pages requièrent une authentification et ne sont pas indexables. Seules les pages publiques d'entrée et de récupération de compte sont listées ci-dessous.
+
+## Pages
+
+- [Accueil / Connexion](/auth): Page d'authentification pour les agents, chefs et membres du Conseil.
+- [Mot de passe oublié](/forgot-password): Récupération de l'accès à un compte CSN.
